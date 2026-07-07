@@ -430,7 +430,11 @@ function startTimer(name){
   t.running = true;
   t.currentStart = new Date();
   renderTimer(name);
-  if (name === 'mission') sendTelegram(buildTelegramMessage(`Mission Start - ${toHHMM(t.currentStart)}`));
+  if (name === 'mission'){
+    let msg = `Mission Start - ${toHHMM(t.currentStart)}`;
+    if (fuel['mission_start']) msg += ` - Fuel ${fuel['mission_start']}kg`;
+    sendTelegram(buildTelegramMessage(msg));
+  }
 }
 function endTimer(name){
   const t = timers[name];
@@ -443,7 +447,9 @@ function endTimer(name){
   if (name === 'mission'){
     const totalMs = t.segments.reduce((sum,seg)=> sum + (seg.end - seg.start), 0);
     const durMins = Math.round(totalMs / 60000);
-    sendTelegram(buildTelegramMessage(`Mission End - ${toHHMM(end)} (Duration: ${fmtDuration(durMins)})`));
+    let msg = `Mission End - ${toHHMM(end)} (Duration: ${fmtDuration(durMins)})`;
+    if (fuel['mission_end']) msg += ` - Fuel ${fuel['mission_end']}kg`;
+    sendTelegram(buildTelegramMessage(msg));
   }
 }
 function setMissionStart(newDate){
@@ -573,7 +579,9 @@ function capture(key){
   document.getElementById('step-'+key).classList.add('done');
   updateSummary();
   updateLiftLandTimer();
-  sendTelegram(buildTelegramMessage(`${STEP_LABELS[key] || key} - ${toHHMM(current[key])}`));
+  let msg = `${STEP_LABELS[key] || key} - ${toHHMM(current[key])}`;
+  if (fuel[key]) msg += ` - Fuel ${fuel[key]}kg`;
+  sendTelegram(buildTelegramMessage(msg));
 }
 
 function resetLeg(){

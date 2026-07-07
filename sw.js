@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flight-timer-cache-v16';
+const CACHE_NAME = 'flight-timer-cache-v17';
 const FILES_TO_CACHE = [
   './',
   './index.html',
