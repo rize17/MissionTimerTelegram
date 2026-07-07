@@ -174,7 +174,20 @@
     padding: 16px 18px; margin-bottom: 12px;
   }
   .timer-card.running{ border-color: var(--amber-dim); background: linear-gradient(180deg, #221a0c, #171310); }
-  .timer-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+  .timer-top{ display:flex; justify-content:space-between; align-items:stretch; margin-bottom:10px; }
+  .hoist-block{ text-align:right; display:flex; flex-direction:column; justify-content:center; gap:10px; }
+  .hoist-label{
+    font-size: 11px; letter-spacing:0.08em; text-transform:uppercase; color: var(--text-dim);
+    font-weight:700; margin-bottom: 8px;
+  }
+  .hoist-counter{ display:flex; align-items:center; gap:10px; justify-content:flex-end; }
+  .hoist-value{ font-size: 22px; font-weight:700; color: var(--text); min-width: 24px; text-align:center; }
+  .hoist-btn{
+    width: 32px; height: 32px; border-radius: 8px; border: 1px solid #33404a;
+    background: var(--panel-raised); color: var(--amber); font-size: 18px; font-weight:700;
+    line-height:1; display:flex; align-items:center; justify-content:center;
+  }
+  .hoist-btn:active{ background: var(--amber); color:#241900; }
   .timer-name{ font-size: 13px; letter-spacing:0.08em; text-transform:uppercase; color: var(--text-dim); font-weight:700; }
   .timer-card.running .timer-name{ color: var(--amber); }
   .timer-sub{ font-size: 11px; color: #56616c; margin-top:2px; }
@@ -262,17 +275,19 @@
   </div>
 
   <div class="step" id="step-off_blocks" data-key="off_blocks">
-    <div class="step-main">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
       <div class="step-label">
         <div class="name">Start</div>
         <div class="hint">Engine start</div>
       </div>
+      <div class="fuel-row" style="margin:0; padding:0; border:none;">
+        <label for="fuel-off_blocks">Fuel</label>
+        <input class="fuel-input mono" id="fuel-off_blocks" data-fuel="off_blocks" type="text" inputmode="decimal" placeholder="kg">
+      </div>
+    </div>
+    <div class="step-main" style="justify-content:flex-end;">
       <input type="time" class="time-display mono" id="disp-off_blocks" data-key="off_blocks">
       <button class="capture" data-key="off_blocks">Capture</button>
-    </div>
-    <div class="fuel-row">
-      <label for="fuel-off_blocks">Fuel</label>
-      <input class="fuel-input mono" id="fuel-off_blocks" data-fuel="off_blocks" type="text" inputmode="decimal" placeholder="kg">
     </div>
   </div>
 
@@ -287,29 +302,37 @@
     </div>
   </div>
 
-  <div class="section-label">Mission</div>
-
   <div class="timer-card" id="timer-mission">
-    <div class="timer-top">
+    <div class="timer-top" style="align-items:baseline; margin-bottom:2px;">
+      <div class="timer-name">Mission</div>
+      <div class="hoist-label">Hoists/Slings</div>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
       <div>
-        <div class="timer-name">Mission</div>
         <div class="timer-sub" id="sub-mission">
           <input type="time" class="mission-time-inline mono" id="mission-start-time"> → <input type="time" class="mission-time-inline mono" id="mission-end-time">
         </div>
+        <div class="timer-big mono" id="big-mission">00:00:00</div>
+      </div>
+      <div class="hoist-counter">
+        <button type="button" class="hoist-btn" id="hoistMinus">−</button>
+        <span class="hoist-value mono" id="hoistCount">0</span>
+        <button type="button" class="hoist-btn" id="hoistPlus">+</button>
       </div>
     </div>
-    <div class="timer-big mono" id="big-mission">00:00:00</div>
-    <div class="fuel-row">
-      <label for="fuel-mission_start">Mission Start</label>
-      <input class="fuel-input mono" id="fuel-mission_start" data-fuel="mission_start" type="text" inputmode="decimal" placeholder="kg">
+    <div class="fuel-row" style="justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <label for="fuel-mission_start" style="width:34px;">Fuel</label>
+        <input class="fuel-input mono" id="fuel-mission_start" data-fuel="mission_start" type="text" inputmode="decimal" placeholder="kg">
+      </div>
+      <button class="btn-timer" id="start-mission" data-timer="mission" style="width:100px; padding:12px 0; font-size:14px;">Start</button>
     </div>
-    <div class="fuel-row">
-      <label for="fuel-mission_end">Mission End</label>
-      <input class="fuel-input mono" id="fuel-mission_end" data-fuel="mission_end" type="text" inputmode="decimal" placeholder="kg">
-    </div>
-    <div class="actions" style="margin-top:16px;">
-      <button class="btn-timer" id="start-mission" data-timer="mission" style="flex:1; width:auto;">Start Mission</button>
-      <button class="btn-timer" id="end-mission" data-timer="mission" style="flex:1; width:auto;">End Mission</button>
+    <div class="fuel-row" style="justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <label for="fuel-mission_end" style="width:34px;">Fuel</label>
+        <input class="fuel-input mono" id="fuel-mission_end" data-fuel="mission_end" type="text" inputmode="decimal" placeholder="kg">
+      </div>
+      <button class="btn-timer" id="end-mission" data-timer="mission" style="width:100px; padding:12px 0; font-size:14px;">End</button>
     </div>
   </div>
 
@@ -325,17 +348,19 @@
   </div>
 
   <div class="step" id="step-on_blocks" data-key="on_blocks">
-    <div class="step-main">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
       <div class="step-label">
         <div class="name">End</div>
         <div class="hint">Engine shutdown</div>
       </div>
+      <div class="fuel-row" style="margin:0; padding:0; border:none;">
+        <label for="fuel-on_blocks">Fuel</label>
+        <input class="fuel-input mono" id="fuel-on_blocks" data-fuel="on_blocks" type="text" inputmode="decimal" placeholder="kg">
+      </div>
+    </div>
+    <div class="step-main" style="justify-content:flex-end;">
       <input type="time" class="time-display mono" id="disp-on_blocks" data-key="on_blocks">
       <button class="capture" data-key="on_blocks">Capture</button>
-    </div>
-    <div class="fuel-row">
-      <label for="fuel-on_blocks">Fuel</label>
-      <input class="fuel-input mono" id="fuel-on_blocks" data-fuel="on_blocks" type="text" inputmode="decimal" placeholder="kg">
     </div>
   </div>
 
@@ -406,6 +431,7 @@ function buildTelegramMessage(line){
 const keys = ['off_blocks','airborne','landed','on_blocks'];
 let current = {};
 let fuel = {};
+let hoistCount = 0;
 
 // Toggle timer for mission (can be started/stopped, tracks segments)
 let timers = {
@@ -449,6 +475,7 @@ function endTimer(name){
     const durMins = Math.round(totalMs / 60000);
     let msg = `Mission End - ${toHHMM(end)} (Duration: ${fmtDuration(durMins)})`;
     if (fuel['mission_end']) msg += ` - Fuel ${fuel['mission_end']}kg`;
+    if (hoistCount) msg += ` - Hoists/Slings ${hoistCount}`;
     sendTelegram(buildTelegramMessage(msg));
   }
 }
@@ -587,6 +614,8 @@ function capture(key){
 function resetLeg(){
   current = {};
   fuel = {};
+  hoistCount = 0;
+  document.getElementById('hoistCount').textContent = hoistCount;
   keys.forEach(k=>{
     document.getElementById('disp-'+k).value = '';
     document.getElementById('step-'+k).classList.remove('done');
@@ -658,6 +687,7 @@ function renderHistory(legs){
       : '';
     return `<div class="leg-card">
       <div class="row1"><span>${leg.reg || ''}${leg.route ? ' · ' + leg.route : ''}</span><span>${dateStr}</span></div>
+      ${leg.hoistCount ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">Hoists/Slings: ${leg.hoistCount}</span></div>` : ''}
       <div class="row2">
         <span class="times mono">Start ${leg.off_blocks?fmtTime(new Date(leg.off_blocks)):'--:--'}</span>
         <span class="times mono">Lift ${leg.airborne?fmtTime(new Date(leg.airborne)):'--:--'}</span>
@@ -740,6 +770,15 @@ document.getElementById('mission-end-time').addEventListener('change', (e)=>{
   setMissionEnd(d);
 });
 
+document.getElementById('hoistMinus').addEventListener('click', ()=>{
+  if (hoistCount > 0) hoistCount--;
+  document.getElementById('hoistCount').textContent = hoistCount;
+});
+document.getElementById('hoistPlus').addEventListener('click', ()=>{
+  hoistCount++;
+  document.getElementById('hoistCount').textContent = hoistCount;
+});
+
 document.getElementById('resetBtn').addEventListener('click', resetLeg);
 
 document.getElementById('saveBtn').addEventListener('click', ()=>{
@@ -754,6 +793,7 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
   legs.push({
     reg: document.getElementById('regInput').value,
     route: document.getElementById('routeInput').value,
+    hoistCount: hoistCount,
     off_blocks: current.off_blocks ? current.off_blocks.toISOString() : null,
     airborne: current.airborne ? current.airborne.toISOString() : null,
     landed: current.landed ? current.landed.toISOString() : null,
@@ -772,6 +812,7 @@ function legToText(leg){
   const lines = [];
   lines.push(`Reg: ${leg.reg || ''}`);
   if (leg.route) lines.push(`Route: ${leg.route}`);
+  if (leg.hoistCount) lines.push(`Hoists/Slings: ${leg.hoistCount}`);
   lines.push(`Date: ${leg.savedAt ? new Date(leg.savedAt).toLocaleDateString('en-GB') : ''}`);
   lines.push(`Start: ${leg.off_blocks ? fmtTime(new Date(leg.off_blocks)) : '--:--'}`);
   lines.push(`Lift: ${leg.airborne ? fmtTime(new Date(leg.airborne)) : '--:--'}`);
