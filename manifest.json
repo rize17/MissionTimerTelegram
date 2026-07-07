@@ -1,0 +1,12 @@
+{
+  "name": "Mission Timer",
+  "short_name": "Mission Timer",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a0d10",
+  "theme_color": "#0a0d10",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-1024.png", "sizes": "1024x1024", "type": "image/png" }
+  ]
+}
