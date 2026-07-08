@@ -2,745 +2,965 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>F&amp;D Calculator</title>
-<link rel="icon" type="image/x-icon" href="F&amp;D-Calculator-favicon.ico">
-<link rel="icon" type="image/png" sizes="32x32" href="F&amp;D-Calculator-32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="F&amp;D-Calculator-192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="F&amp;D-Calculator-180.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Mission Timer">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0d10">
+<title>Mission Timer</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
+<link rel="apple-touch-icon" sizes="167x167" href="icon-167.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
-
   :root{
-    --bg: #0E1318;
-    --panel: #171E26;
-    --panel-raised: #1D2530;
-    --line: #2A3440;
-    --text: #E7EAEE;
-    --text-dim: #8B96A3;
-    --amber: #F2A93B;
-    --amber-dim: #7A5A22;
-    --teal: #4FD1C5;
-    --teal-dim: #205C56;
-    --red: #E5484D;
-    --green: #52C77E;
+    --bg: #0a0d10;
+    --panel: #12171c;
+    --panel-raised: #171d23;
+    --line: #262f37;
+    --amber: #ffb000;
+    --amber-dim: #7a5800;
+    --green: #2de08e;
+    --green-dim: #0f5c3c;
+    --text: #e6ecf0;
+    --text-dim: #7c8894;
+    --red: #ff4d4d;
   }
-
-  * { box-sizing: border-box; }
-
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{
+    margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    min-height:100vh;
   }
-
-  body {
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    padding: 24px 16px 60px;
+  .mono{
+    font-family: 'SF Mono', 'Roboto Mono', ui-monospace, 'Courier New', monospace;
+    font-variant-numeric: tabular-nums;
   }
-
-  .device {
-    width: 100%;
-    max-width: 460px;
+  .wrap{
+    max-width: 480px; margin: 0 auto; padding: 18px 16px 40px;
   }
-
-  .header {
-    margin-bottom: 20px;
+  header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding: 6px 2px 16px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 18px;
   }
-
-  .eyebrow {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    color: var(--amber);
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  header h1{
+    font-size: 15px; letter-spacing: 0.14em; text-transform: uppercase;
+    font-weight: 700; color: var(--text); margin:0;
   }
-
-  .eyebrow::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--amber);
-    box-shadow: 0 0 8px var(--amber);
+  header .reg{
+    font-size: 13px; color: var(--amber); font-weight:600;
+    background: none; border: none; text-align:right;
+    border-bottom: 1px dashed var(--amber-dim);
+    padding: 2px 0; width: 90px;
   }
-
-  h1 {
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-    font-size: 22px;
-    margin: 6px 0 2px;
-    letter-spacing: -0.01em;
+  header .reg:focus{ outline:none; border-bottom-color: var(--amber); }
+  header .reg::placeholder{ color: #4a3a1a; font-style: italic; font-weight:400; }
+  header .header-right{
+    display:flex; flex-direction:column; align-items:flex-end; gap:4px;
   }
-
-  .subhead {
-    font-size: 13px;
-    color: var(--text-dim);
+  .route-clock-row{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom: 22px;
   }
+  .route{
+    font-size: 13px; color: var(--text); font-weight:600;
+    background: none; border: none; text-align:left;
+    border-bottom: 1px dashed #3a4048;
+    padding: 4px 0; width: 150px; letter-spacing: 0.05em;
+  }
+  .route::placeholder{ color: #3a4048; font-style: italic; font-weight:400; }
+  .route:focus{ outline:none; border-bottom-color: var(--text-dim); }
 
-  .panel {
+  .clock{
+    text-align:right; color: var(--text-dim); font-size: 13px;
+    letter-spacing: 0.05em;
+  }
+  .clock span{ color: var(--text-dim); font-size: 15px; }
+
+  .flight-timer{
+    text-align:center; margin-bottom: 22px; padding: 14px 16px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  }
+  .flight-timer.running{ border-color: var(--amber-dim); background: linear-gradient(180deg, #221a0c, #171310); }
+  .flight-timer .label{
+    font-size: 11px; letter-spacing:0.1em; text-transform:uppercase; color: var(--text-dim); margin-bottom: 6px;
+  }
+  .flight-timer .value{ font-size: 30px; font-weight:700; color: #3a444d; letter-spacing:0.02em; }
+  .flight-timer.running .value{ color: var(--amber); }
+
+  .step{
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 16px;
-    overflow: hidden;
-  }
-
-  /* --- Mode switch, styled like a toggle guard on an instrument panel --- */
-  .mode-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 4px;
-  }
-
-  .mode-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    color: var(--text-dim);
-    text-transform: uppercase;
-  }
-
-  .switch {
-    position: relative;
-    width: 168px;
-    height: 40px;
-    background: var(--panel-raised);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    display: flex;
-    cursor: pointer;
-    user-select: none;
-    padding: 3px;
-  }
-
-  .switch-option {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    z-index: 2;
-    transition: color 0.2s ease;
-  }
-
-  .switch-thumb {
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: calc(50% - 3px);
-    height: calc(100% - 6px);
-    background: var(--amber);
-    border-radius: 6px;
-    transition: transform 0.25s cubic-bezier(.4,0,.2,1);
-    z-index: 1;
-  }
-
-  .switch.split .switch-thumb {
-    transform: translateX(calc(100% + 0px));
-    background: var(--teal);
-  }
-
-  .switch.split .switch-option:nth-child(2) { color: #06181A; font-weight: 600; }
-  .switch:not(.split) .switch-option:nth-child(1) { color: #221604; font-weight: 600; }
-
-  /* --- Timeline gauge --- */
-  .gauge {
-    margin: 18px 0 6px;
-  }
-
-  .gauge-track {
-    position: relative;
-    height: 34px;
-    border-radius: 6px;
-    background: var(--panel-raised);
-    border: 1px solid var(--line);
-    overflow: hidden;
-    display: flex;
-  }
-
-  .seg {
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.05em;
-    color: rgba(0,0,0,0.55);
-    white-space: nowrap;
-    overflow: hidden;
-  }
-
-  .seg.duty { background: var(--amber); }
-  .seg.break { background: var(--panel); color: var(--text-dim); border-left: 1px dashed var(--line); border-right: 1px dashed var(--line); }
-  .seg.rest { background: var(--teal); }
-
-  .gauge-labels {
-    display: flex;
-    justify-content: space-between;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: var(--text-dim);
-    margin-top: 6px;
-  }
-
-  /* --- Fields --- */
-  .field-group {
-    margin-top: 18px;
-  }
-
-  .field {
-    margin-bottom: 14px;
-    max-width: 100%;
-  }
-
-  .field label {
-    display: block;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 6px;
-  }
-
-  .field input[type="datetime-local"] {
-    -webkit-appearance: none;
-    appearance: none;
-    display: block;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    min-height: 44px;
-    box-sizing: border-box;
-    background: var(--panel-raised);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 10px 12px;
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 14px;
-    text-align: left;
-  }
-
-  .field input[type="datetime-local"]:focus {
-    outline: 2px solid var(--amber);
-    outline-offset: 1px;
-  }
-
-  .field input::-webkit-calendar-picker-indicator {
-    filter: invert(0.7);
-  }
-
-  .readout {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--panel-raised);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 10px 12px;
-  }
-
-  .readout .rlabel {
-    font-size: 13px;
-    color: var(--text-dim);
-  }
-
-  .readout .rvalue {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 15px;
-    font-weight: 700;
-  }
-
-  .rvalue.amber { color: var(--amber); }
-  .rvalue.teal { color: var(--teal); }
-  .rvalue.red { color: var(--red); }
-
-  .divider {
-    height: 1px;
-    background: var(--line);
-    margin: 18px 0;
-  }
-
-  /* Local night toggle (checkbox styled as chip pair) */
-  .chip-row {
-    display: flex;
-    gap: 8px;
-  }
-
-  .chip {
-    flex: 1;
-    text-align: center;
-    padding: 9px 0;
-    border-radius: 6px;
-    border: 1px solid var(--line);
-    background: var(--panel-raised);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    cursor: pointer;
-  }
-
-  .chip.active {
-    border-color: var(--amber);
-    color: var(--amber);
-    background: rgba(242,169,59,0.08);
-  }
-
-  .result-panel {
-    background: linear-gradient(180deg, var(--panel-raised) 0%, var(--panel) 100%);
-    border: 1px solid var(--teal-dim);
-  }
-
-  .result-title {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    color: var(--teal);
-    text-transform: uppercase;
+    border-radius: 14px;
+    padding: 14px 16px;
     margin-bottom: 12px;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .step-main{
+    display:flex; align-items:center; justify-content:space-between; gap: 12px;
+  }
+  .step.done{
+    border-color: var(--green-dim);
+    background: linear-gradient(180deg, #12211b, #11191a);
+  }
+  .step-label{
+    display:flex; flex-direction:column; gap:3px;
+  }
+  .step-label .name{
+    font-size: 13px; letter-spacing:0.08em; text-transform:uppercase;
+    color: var(--text-dim); font-weight:700;
+  }
+  .step.done .step-label .name{ color: var(--green); }
+  .step-label .hint{ font-size: 11px; color: #56616c; }
+
+  .fuel-row{
+    display:flex; align-items:center; justify-content:flex-end; gap:8px;
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);
+  }
+  .fuel-row label{
+    font-size: 11px; letter-spacing:0.08em; text-transform:uppercase; color: var(--text-dim);
+  }
+  input.fuel-input{
+    -webkit-appearance:none; appearance:none;
+    background: var(--panel-raised); border: 1px solid #33404a; color: var(--text);
+    font-size: 15px; font-weight:600; text-align:right;
+    padding: 8px 10px; border-radius: 8px; width: 84px;
+    font-family: 'SF Mono', 'Roboto Mono', ui-monospace, 'Courier New', monospace;
+  }
+  input.fuel-input:focus{ outline:none; border-color: var(--amber); }
+  input.fuel-input::placeholder{ color: #4a5560; }
+  input.mission-time-inline{
+    -webkit-appearance:none; appearance:none; background:transparent; border:none;
+    font: inherit; color: inherit; padding:0; width:auto; color-scheme: dark;
+  }
+  input.mission-time-inline:focus{ outline:none; }
+
+  .time-display{
+    font-size: 26px; font-weight:600; color: #3a444d; min-width: 92px; text-align:right;
+  }
+  .step.done .time-display{ color: var(--text); }
+  input.time-display{
+    -webkit-appearance:none; appearance:none; background:transparent; border:none;
+    font: inherit; color: inherit; padding:0; color-scheme: dark;
+  }
+  input.time-display:focus{ outline:none; }
+
+  button.capture{
+    -webkit-appearance:none; appearance:none; border:none; cursor:pointer;
+    background: var(--panel-raised);
+    border: 1px solid #33404a;
+    color: var(--amber);
+    font-size: 13px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+    padding: 14px 18px; border-radius: 12px;
+    min-width: 108px;
+    transition: transform .08s ease, background .12s ease;
+  }
+  button.capture:active{ transform: scale(0.96); background:#1e262e; }
+  .step.done button.capture{
+    background: var(--green-dim); color: #d8ffe9; border-color: var(--green);
   }
 
-  .big-readout {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 26px;
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1.2;
+  .section-label{
+    font-size: 12px; letter-spacing:0.12em; text-transform:uppercase; color: var(--text-dim);
+    margin: 22px 2px 10px; font-weight:700;
   }
 
-  .big-readout .date-part {
-    font-size: 13px;
-    color: var(--text-dim);
-    font-weight: 500;
-    display: block;
-    margin-bottom: 2px;
+  .timer-card{
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px 18px; margin-bottom: 12px;
   }
-
-  .note {
-    font-size: 12px;
-    color: var(--text-dim);
-    margin-top: 6px;
-    line-height: 1.5;
+  .timer-card.running{ border-color: var(--amber-dim); background: linear-gradient(180deg, #221a0c, #171310); }
+  .timer-top{ display:flex; justify-content:space-between; align-items:stretch; margin-bottom:10px; }
+  .hoist-block{ text-align:right; display:flex; flex-direction:column; justify-content:center; gap:10px; }
+  .hoist-label{
+    font-size: 11px; letter-spacing:0.08em; text-transform:uppercase; color: var(--text-dim);
+    font-weight:700; margin-bottom: 8px;
   }
-
-  .warn {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    background: rgba(229,72,77,0.08);
-    border: 1px solid rgba(229,72,77,0.35);
-    color: var(--red);
-    border-radius: 6px;
-    padding: 10px 12px;
-    font-size: 12.5px;
-    margin-top: 14px;
-    line-height: 1.5;
+  .hoist-counter{ display:flex; align-items:center; gap:10px; justify-content:flex-end; }
+  .hoist-value{ font-size: 22px; font-weight:700; color: var(--text); min-width: 24px; text-align:center; }
+  .hoist-btn{
+    width: 32px; height: 32px; border-radius: 8px; border: 1px solid #33404a;
+    background: var(--panel-raised); color: var(--amber); font-size: 18px; font-weight:700;
+    line-height:1; display:flex; align-items:center; justify-content:center;
   }
-
-  .table-scroll {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin: 0 -20px;
-    padding: 0 20px;
+  .hoist-btn:active{ background: var(--amber); color:#241900; }
+  .timer-name{ font-size: 13px; letter-spacing:0.08em; text-transform:uppercase; color: var(--text-dim); font-weight:700; }
+  .timer-card.running .timer-name{ color: var(--amber); }
+  .timer-sub{ font-size: 11px; color: #56616c; margin-top:2px; }
+  .timer-big{
+    font-size: 34px; font-weight:700; color: #3a444d; letter-spacing: 0.02em; margin: 4px 0 12px;
   }
-
-  .break-grid {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11.5px;
+  .timer-card.running .timer-big{ color: var(--amber); }
+  button.btn-timer{
+    -webkit-appearance:none; appearance:none; border:none; cursor:pointer; width:100%;
+    background: var(--panel-raised); border: 1px solid #33404a; color: var(--text);
+    font-size: 13px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+    padding: 13px; border-radius: 12px; transition: transform .08s ease, background .12s ease;
   }
+  button.btn-timer:active{ transform: scale(0.97); }
+  button.btn-timer.active{ background: var(--amber); color: #241900; border-color: var(--amber); }
+  button.btn-timer:disabled{ opacity: 0.35; cursor: not-allowed; }
 
-  .break-grid th {
-    text-align: left;
-    color: var(--text-dim);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-size: 10px;
-    padding: 0 6px 8px;
-    border-bottom: 1px solid var(--line);
+  .summary{
+    margin-top: 18px; padding: 16px 18px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 14px;
   }
-
-  .break-grid td {
-    padding: 8px 6px;
-    border-bottom: 1px solid var(--line);
-    color: var(--text);
-    white-space: nowrap;
+  .summary-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 8px 0; border-bottom: 1px solid var(--line);
   }
+  .summary-row:last-child{ border-bottom:none; }
+  .summary-row .label{ font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim); }
+  .summary-row .value{ font-size: 20px; font-weight:700; color: var(--amber); }
 
-  .break-grid tr:last-child td {
-    border-bottom: none;
+  .actions{ display:flex; gap:10px; margin-top:18px; }
+  .btn{
+    flex:1; -webkit-appearance:none; appearance:none; border:none; cursor:pointer;
+    padding: 15px; border-radius: 12px; font-size: 14px; font-weight:700;
+    letter-spacing:0.05em; text-transform:uppercase;
   }
+  .btn-save{ background: var(--green); color:#04201430; color:#052014; }
+  .btn-reset{ background: transparent; color: var(--text-dim); border: 1px solid var(--line); }
+  .btn:active{ transform: scale(0.97); }
 
-  .break-grid td.amber { color: var(--amber); font-weight: 700; }
-  .break-grid td.teal { color: var(--teal); font-weight: 700; }
-  .break-grid td.dim { color: var(--text-dim); }
-
-  .break-grid tr.row-invalid td {
-    text-decoration: line-through;
-    color: var(--text-dim);
-    opacity: 0.45;
-    font-weight: 400;
+  .history{ margin-top: 28px; }
+  .history h2{
+    font-size: 12px; letter-spacing:0.12em; text-transform:uppercase; color: var(--text-dim);
+    margin: 0 0 10px 2px; display:flex; justify-content:space-between; align-items:center;
   }
-
-  footer {
-    text-align: center;
-    font-size: 11px;
-    color: var(--text-dim);
-    margin-top: 8px;
-    font-family: 'JetBrains Mono', monospace;
+  .history h2 button{
+    background:none; border:none; color: var(--red); font-size:11px;
+    letter-spacing:0.06em; text-transform:uppercase; cursor:pointer; padding:4px;
   }
-
-  @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; }
+  .leg-card{
+    background: var(--panel); border:1px solid var(--line); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 10px; font-size: 13px;
   }
+  .leg-card .row1{ display:flex; justify-content:space-between; color: var(--text-dim); margin-bottom:6px; }
+  .leg-card .row2{ display:flex; justify-content:space-between; }
+  .leg-card .times{ color: var(--text); }
+  .leg-card .durations{ color: var(--amber); font-weight:600; }
+  .empty{ color: var(--text-dim); font-size: 13px; text-align:center; padding: 20px 0; }
+
+  .toast{
+    position:fixed; bottom: 24px; left:50%; transform:translateX(-50%);
+    background: var(--green); color:#052014; font-weight:700; font-size:13px;
+    padding: 10px 18px; border-radius: 20px; opacity:0; pointer-events:none;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(-4px); }
 </style>
 </head>
 <body>
+<div class="wrap">
+  <header>
+    <h1>Mission Timer</h1>
+    <div class="header-right">
+      <input class="reg mono" id="regInput" placeholder="Reg" maxlength="10">
+    </div>
+  </header>
 
-<div class="device">
-
-  <div class="header" style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
-    <h1 style="margin:0;">F&amp;D Calculator</h1>
-    <button id="resetBtn" type="button" style="flex-shrink:0; background:var(--panel-raised); border:1px solid var(--line); border-radius:6px; color:var(--text-dim); font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; padding:8px 12px; cursor:pointer;">Reset</button>
+  <div class="route-clock-row">
+    <input class="route mono" id="routeInput" placeholder="Route" maxlength="40">
+    <div class="clock mono">Now &nbsp; <span id="liveClock">--:--:--</span></div>
   </div>
 
-  <div class="panel">
-    <div class="field-group">
-      <div class="field">
-        <label for="startDuty">Start of duty</label>
-        <input type="datetime-local" id="startDuty" step="600">
-      </div>
+  <div class="flight-timer" id="liftLandTimer">
+    <div class="label">Lift → Land</div>
+    <div class="value mono" id="liftLandValue">00:00:00</div>
+  </div>
 
-      <div class="field">
-        <label>Theoretical max duty end (+12:00)</label>
-        <div class="readout">
-          <span class="rlabel">Auto-calculated</span>
-          <span class="rvalue amber" id="normalDutyEnd">—</span>
+  <div class="step" id="step-off_blocks" data-key="off_blocks">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <div class="step-label">
+        <div class="name">Start</div>
+        <div class="hint">Engine start</div>
+      </div>
+      <div class="fuel-row" style="margin:0; padding:0; border:none;">
+        <label for="fuel-off_blocks">Fuel</label>
+        <input class="fuel-input mono" id="fuel-off_blocks" data-fuel="off_blocks" type="text" inputmode="decimal" placeholder="kg">
+      </div>
+    </div>
+    <div class="step-main" style="justify-content:flex-end;">
+      <input type="time" class="time-display mono" id="disp-off_blocks" data-key="off_blocks">
+      <button class="capture" data-key="off_blocks">Capture</button>
+    </div>
+  </div>
+
+  <div class="step" id="step-airborne" data-key="airborne">
+    <div class="step-main">
+      <div class="step-label">
+        <div class="name">Lift</div>
+        <div class="hint">Take-off</div>
+      </div>
+      <input type="time" class="time-display mono" id="disp-airborne" data-key="airborne">
+      <button class="capture" data-key="airborne">Capture</button>
+    </div>
+  </div>
+
+  <div class="timer-card" id="timer-mission">
+    <div class="timer-top" style="align-items:baseline; margin-bottom:2px;">
+      <div class="timer-name">Mission</div>
+      <div class="hoist-label">Hoists/Slings</div>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div>
+        <div class="timer-sub" id="sub-mission">
+          <input type="time" class="mission-time-inline mono" id="mission-start-time"> → <input type="time" class="mission-time-inline mono" id="mission-end-time">
         </div>
+        <div class="timer-big mono" id="big-mission">00:00:00</div>
       </div>
-      <div class="field">
-        <label>Max flight time (Table 1, two pilots)</label>
-        <div class="readout">
-          <span class="rlabel" id="maxFlightLabel">From local start time band</span>
-          <span class="rvalue amber" id="maxFlightReadout">—</span>
-        </div>
-      </div>
-      <div class="field">
-        <label for="actualDutyEnd">Actual duty end (optional — leave blank to use the 12:00 max)</label>
-        <input type="datetime-local" id="actualDutyEnd" step="600">
+      <div class="hoist-counter">
+        <button type="button" class="hoist-btn" id="hoistMinus">−</button>
+        <span class="hoist-value mono" id="hoistCount">0</span>
+        <button type="button" class="hoist-btn" id="hoistPlus">+</button>
       </div>
     </div>
-
-    <div class="divider"></div>
-
-    <div class="field" id="localNightField">
-      <label>Local night in rest period</label>
-      <div class="readout">
-        <span class="rlabel" id="nightWindowLabel">Detected from duty end + rest window</span>
-        <span class="rvalue" id="localNightReadout">—</span>
+    <div class="fuel-row" style="justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <label for="fuel-mission_start" style="width:34px;">Fuel</label>
+        <input class="fuel-input mono" id="fuel-mission_start" data-fuel="mission_start" type="text" inputmode="decimal" placeholder="kg">
       </div>
+      <button class="btn-timer" id="start-mission" data-timer="mission" style="width:100px; padding:12px 0; font-size:14px;">Start</button>
     </div>
-
-    <div class="gauge" id="gaugeWrap">
-      <div class="gauge-track" id="gaugeTrack"></div>
-      <div class="gauge-labels">
-        <span>Start</span>
-        <span>Duty end</span>
-        <span>Next duty</span>
+    <div class="fuel-row" style="justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <label for="fuel-mission_end" style="width:34px;">Fuel</label>
+        <input class="fuel-input mono" id="fuel-mission_end" data-fuel="mission_end" type="text" inputmode="decimal" placeholder="kg">
       </div>
+      <button class="btn-timer" id="end-mission" data-timer="mission" style="width:100px; padding:12px 0; font-size:14px;">End</button>
     </div>
   </div>
 
-  <div class="warn" id="warnBox" style="display:none;"></div>
-
-  <div class="panel result-panel" id="resultPanel">
-    <div class="result-title" id="resultTitle">Earliest next duty start</div>
-    <div class="big-readout">
-      <span class="date-part" id="nextDutyDate">—</span>
-      <span id="nextDutyTime">—:—</span>
+  <div class="step" id="step-landed" data-key="landed">
+    <div class="step-main">
+      <div class="step-label">
+        <div class="name">Land</div>
+        <div class="hint">Touchdown</div>
+      </div>
+      <input type="time" class="time-display mono" id="disp-landed" data-key="landed">
+      <button class="capture" data-key="landed">Capture</button>
     </div>
-    <div class="note" id="secondaryLine" style="margin-top:2px;"></div>
-    <div class="note" id="resultNote">Enter a start of duty time above to begin.</div>
   </div>
 
-  <div class="panel" id="breakGridPanel">
-    <div class="mode-label" style="margin-bottom:10px;">Split duty — break length options</div>
-    <div class="note" style="margin-bottom:10px;">If this duty is split, here's the resulting final duty end for a break taken after the duty end above.</div>
-    <div id="breakGridWrap"></div>
-    <div class="note" style="margin-top:10px;">🛏 breaks over 6:00 require a bed; up to 6:00 a quiet private place suffices (7.2). The break excludes time for immediate post-flight and pre-flight duties. Breaks under 3:00 earn no extension. Every extended duty here exceeds 11 hours, so 8(2)(a)(iii) applies — an additional rest period per your operator's approved scheme is required beyond the standard 9/10 hours.</div>
+  <div class="step" id="step-on_blocks" data-key="on_blocks">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <div class="step-label">
+        <div class="name">End</div>
+        <div class="hint">Engine shutdown</div>
+      </div>
+      <div class="fuel-row" style="margin:0; padding:0; border:none;">
+        <label for="fuel-on_blocks">Fuel</label>
+        <input class="fuel-input mono" id="fuel-on_blocks" data-fuel="on_blocks" type="text" inputmode="decimal" placeholder="kg">
+      </div>
+    </div>
+    <div class="step-main" style="justify-content:flex-end;">
+      <input type="time" class="time-display mono" id="disp-on_blocks" data-key="on_blocks">
+      <button class="capture" data-key="on_blocks">Capture</button>
+    </div>
   </div>
 
-  <footer>
-    Covers Part 127 Table 1 (two-pilot helicopter FDP), 7.2 split duty extension, and 8(2)(a) rest periods.<br>
-    "Local night" for 8(2)(a) is auto-detected using SACAA's own definition (Part 127.1, inserted by SA-CATS 2/2025, w.e.f. 20 June 2025): a period of 8 hours falling between 22:00 and 08:00 local time.
-  </footer>
+  <div class="actions">
+    <button class="btn btn-reset" id="resetBtn">Reset Leg</button>
+    <button class="btn btn-save" id="saveBtn">Save Leg</button>
+  </div>
 
+  <div class="history">
+    <h2>Saved Legs <span><button id="exportHistory" style="color:var(--green); margin-right:10px;">Export</button><button id="clearHistory">Clear all</button></span></h2>
+    <div id="historyList"><div class="empty">No legs saved yet</div></div>
+  </div>
+
+  <div class="summary" id="totalFuelCard" style="margin-top:14px; display:none;">
+    <div class="summary-row">
+      <div class="label">Total Fuel Used (all legs)</div>
+      <div class="value mono" id="totalFuelUsed">—</div>
+    </div>
+  </div>
+
+  <div class="section-label" id="notifToggle" style="cursor:pointer;">Notifications ▸</div>
+  <div class="timer-card" id="notifPanel" style="display:none;">
+    <div class="fuel-row">
+      <label for="workerUrl">Relay URL</label>
+      <input class="fuel-input mono" id="workerUrl" type="text" placeholder="https://...workers.dev">
+    </div>
+    <div class="actions" style="margin-top:14px;">
+      <button class="btn-timer" id="tgSaveBtn" style="flex:1; width:auto;">Save</button>
+      <button class="btn-timer" id="tgTestBtn" style="flex:1; width:auto;">Send Test</button>
+    </div>
+  </div>
 </div>
 
+<div class="toast" id="toast">Leg saved</div>
+
+<div id="doneBar" style="display:none; position:fixed; left:0; right:0; bottom:0; z-index:9999; background:#1c2126; border-top:1px solid #2a2f36; padding:10px 14px; justify-content:flex-end;">
+  <button id="doneBarBtn" style="background:var(--amber); color:#241900; font-weight:700; font-size:16px; border:none; border-radius:10px; padding:10px 22px;">Done</button>
+</div>
 <script>
-(function(){
-  const startDutyEl = document.getElementById('startDuty');
-  const actualDutyEndEl = document.getElementById('actualDutyEnd');
+const STORAGE_KEY = 'flight-timer:legs';
+const REG_KEY = 'flight-timer:reg';
+const WORKER_URL_KEY = 'flight-timer:worker_url';
+const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'End' };
 
-  const normalDutyEndEl = document.getElementById('normalDutyEnd');
-  const maxFlightReadoutEl = document.getElementById('maxFlightReadout');
-  const maxFlightLabelEl = document.getElementById('maxFlightLabel');
-  const breakGridWrapEl = document.getElementById('breakGridWrap');
-
-  const localNightReadout = document.getElementById('localNightReadout');
-
-  const nextDutyDateEl = document.getElementById('nextDutyDate');
-  const nextDutyTimeEl = document.getElementById('nextDutyTime');
-  const resultTitleEl = document.getElementById('resultTitle');
-  const secondaryLineEl = document.getElementById('secondaryLine');
-  const resultNote = document.getElementById('resultNote');
-  const warnBox = document.getElementById('warnBox');
-  const gaugeTrack = document.getElementById('gaugeTrack');
-
-  function parseDT(el){
-    if (!el.value) return null;
-    const d = new Date(el.value);
-    return isNaN(d.getTime()) ? null : d;
-  }
-
-  function nowLocalISO(){
-    const n = new Date();
-    n.setSeconds(0, 0);
-    n.setMinutes(Math.round(n.getMinutes() / 10) * 10); // snap to 10-min intervals
-    const pad = v => String(v).padStart(2,'0');
-    return n.getFullYear() + '-' + pad(n.getMonth()+1) + '-' + pad(n.getDate()) +
-           'T' + pad(n.getHours()) + ':' + pad(n.getMinutes());
-  }
-
-  [startDutyEl, actualDutyEndEl].forEach(el => el.addEventListener('input', compute));
-
-  const resetBtn = document.getElementById('resetBtn');
-  resetBtn.addEventListener('click', () => {
-    startDutyEl.value = nowLocalISO();
-    actualDutyEndEl.value = '';
-    compute();
-  });
-
-
-  function fmtHM(hoursFloat){
-    const totalMin = Math.round(hoursFloat * 60);
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    return h + ':' + String(m).padStart(2,'0');
-  }
-
-  function fmtDateTime(d){
-    const dateStr = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-    const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
-    return { dateStr, timeStr };
-  }
-
-  // SACAA Part 127.1 defines "local night" as a period of 8 hours falling between
-  // 22:00 and 08:00 local time (inserted by SA-CATS 2/2025, w.e.f. 20 June 2025).
-  function nightOverlapHours(start, end){
-    let cursor = new Date(start); cursor.setHours(0,0,0,0); cursor.setDate(cursor.getDate() - 1);
-    const bound = new Date(end); bound.setHours(0,0,0,0); bound.setDate(bound.getDate() + 1);
-    let total = 0;
-    while (cursor <= bound){
-      const nightStart = new Date(cursor); nightStart.setHours(22,0,0,0);
-      const nightEnd = new Date(nightStart); nightEnd.setDate(nightEnd.getDate() + 1); nightEnd.setHours(8,0,0,0);
-      const overlapStart = new Date(Math.max(start.getTime(), nightStart.getTime()));
-      const overlapEnd = new Date(Math.min(end.getTime(), nightEnd.getTime()));
-      if (overlapEnd > overlapStart) total += (overlapEnd - overlapStart) / 3600000;
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    return total;
-  }
-
-  function setGauge(segments){
-    // segments: [{cls, hours, label}]
-    const total = segments.reduce((s,seg) => s + Math.max(seg.hours,0), 0);
-    gaugeTrack.innerHTML = '';
-    if (total <= 0) return;
-    segments.forEach(seg => {
-      if (seg.hours <= 0) return;
-      const div = document.createElement('div');
-      div.className = 'seg ' + seg.cls;
-      div.style.width = (seg.hours / total * 100) + '%';
-      div.textContent = seg.hours >= 1.2 ? seg.label : '';
-      gaugeTrack.appendChild(div);
+async function sendTelegram(text){
+  let url;
+  try{
+    url = localStorage.getItem(WORKER_URL_KEY);
+  }catch(e){ return; }
+  if (!url) return;
+  try{
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text })
     });
+  }catch(e){
+    // Silent fail - never interrupt the actual logging flow over a network hiccup.
   }
+}
 
-  let warnings = [];
-  function showWarn(msg){
-    warnings.push(msg);
-    warnBox.style.display = 'flex';
-    warnBox.innerHTML = warnings.map(w => '⚠ ' + w).join('<br><br>');
+function buildTelegramMessage(line){
+  const reg = document.getElementById('regInput').value || 'Aircraft';
+  const route = document.getElementById('routeInput').value;
+  const header = route ? `${reg} - ${route}` : reg;
+  return `${header}\n${line}`;
+}
+const keys = ['off_blocks','airborne','landed','on_blocks'];
+let current = {};
+let fuel = {};
+let hoistCount = 0;
+
+// Toggle timer for mission (can be started/stopped, tracks segments)
+let timers = {
+  mission: { segments: [], running: false, currentStart: null }
+};
+
+function fmtHMS(ms){
+  const totalSec = Math.max(0, Math.floor(ms/1000));
+  const h = Math.floor(totalSec/3600);
+  const m = Math.floor((totalSec%3600)/60);
+  const s = totalSec%60;
+  return [h,m,s].map(n=>String(n).padStart(2,'0')).join(':');
+}
+function timerTotalMs(t, now){
+  let ms = t.segments.reduce((sum,seg)=> sum + (seg.end - seg.start), 0);
+  if (t.running && t.currentStart) ms += (now - t.currentStart);
+  return ms;
+}
+function startTimer(name){
+  const t = timers[name];
+  if (t.running) return;
+  t.running = true;
+  t.currentStart = new Date();
+  renderTimer(name);
+  if (name === 'mission'){
+    let msg = `Mission Start - ${toHHMM(t.currentStart)}`;
+    if (fuel['mission_start']) msg += ` - Fuel ${fuel['mission_start']}kg`;
+    sendTelegram(buildTelegramMessage(msg));
   }
-  function hideWarn(){
-    warnings = [];
-    warnBox.style.display = 'none';
-    warnBox.innerHTML = '';
+}
+function endTimer(name){
+  const t = timers[name];
+  if (!t.running) return;
+  const end = new Date();
+  t.segments.push({ start: t.currentStart, end: end });
+  t.running = false;
+  t.currentStart = null;
+  renderTimer(name);
+  if (name === 'mission'){
+    const totalMs = t.segments.reduce((sum,seg)=> sum + (seg.end - seg.start), 0);
+    const durMins = Math.round(totalMs / 60000);
+    let msg = `Mission End - ${toHHMM(end)} (Duration: ${fmtDuration(durMins)})`;
+    if (fuel['mission_end']) msg += ` - Fuel ${fuel['mission_end']}kg`;
+    if (hoistCount) msg += ` - Hoists/Slings ${hoistCount}`;
+    sendTelegram(buildTelegramMessage(msg));
   }
+}
+function setMissionStart(newDate){
+  const t = timers.mission;
+  if (t.running){
+    t.currentStart = newDate;
+  } else if (t.segments.length){
+    t.segments[0].start = newDate;
+  } else {
+    t.running = true;
+    t.currentStart = newDate;
+  }
+  renderTimer('mission');
+  tickTimers();
+}
+function setMissionEnd(newDate){
+  const t = timers.mission;
+  if (t.running){
+    t.segments.push({ start: t.currentStart, end: newDate });
+    t.running = false;
+    t.currentStart = null;
+  } else if (t.segments.length){
+    t.segments[t.segments.length-1].end = newDate;
+  } else {
+    t.segments.push({ start: newDate, end: newDate });
+  }
+  renderTimer('mission');
+  tickTimers();
+}
+function renderTimer(name){
+  const t = timers[name];
+  const card = document.getElementById('timer-'+name);
+  const startBtn = document.getElementById('start-'+name);
+  const endBtn = document.getElementById('end-'+name);
+  const sub = document.getElementById('sub-'+name);
+  card.classList.toggle('running', t.running);
+  startBtn.disabled = t.running;
+  endBtn.disabled = !t.running;
+  startBtn.classList.toggle('active', false);
+  endBtn.classList.toggle('active', t.running);
+  if (name === 'mission'){
+    const startInput = document.getElementById('mission-start-time');
+    const endInput = document.getElementById('mission-end-time');
+    const startVal = t.currentStart || (t.segments.length ? t.segments[0].start : null);
+    startInput.value = startVal ? toHHMM(startVal) : '';
+    const endVal = (!t.running && t.segments.length) ? t.segments[t.segments.length-1].end : null;
+    endInput.value = endVal ? toHHMM(endVal) : '';
+  } else if (t.running){
+    sub.textContent = 'Started ' + fmtTime(t.currentStart);
+  } else if (t.segments.length){
+    const last = t.segments[t.segments.length-1];
+    sub.textContent = fmtTime(t.segments[0].start) + ' → ' + fmtTime(last.end);
+  } else {
+    sub.textContent = 'Not started';
+  }
+}
+function tickTimers(){
+  const now = new Date();
+  const t = timers.mission;
+  document.getElementById('big-mission').textContent = fmtHMS(timerTotalMs(t, now));
+}
+function resetTimers(){
+  timers = {
+    mission: { segments: [], running: false, currentStart: null }
+  };
+  renderTimer('mission');
+  tickTimers();
+}
 
-  // 8(2)(a) gives two alternatives: (i) at least 9 consecutive hours including a local
-  // night, or (ii) 10 consecutive hours. "At least" means (i) can also be satisfied by a
-  // rest longer than 9h that reaches the required night coverage — e.g. duty ending 20:30
-  // qualifies with a 9.5h rest to 06:00, which beats the 10h option by 30 minutes. So we
-  // take the earlier of: (a) the earliest time >= dutyEnd+9h at which 8h of 22:00–08:00
-  // coverage is achieved, and (b) dutyEnd+10h.
-  function computeRestForDutyEnd(dutyEnd){
-    const tenHourEnd = new Date(dutyEnd.getTime() + 10 * 3600 * 1000);
-    const nineHourEnd = new Date(dutyEnd.getTime() + 9 * 3600 * 1000);
+function fmtTime(d){
+  return d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', hour12:false});
+}
+function toHHMM(d){
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function fmtClock(d){
+  return d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
+}
+function diffMinutes(a,b){
+  return Math.round((b-a)/60000);
+}
+function fmtDuration(mins){
+  if (mins < 0) mins += 24*60;
+  const h = Math.floor(mins/60), m = mins%60;
+  return h + 'h ' + String(m).padStart(2,'0') + 'm';
+}
 
-    // Scan minute-by-minute from +9h up to +10h for the first moment (i) is satisfied.
-    for (let t = nineHourEnd.getTime(); t < tenHourEnd.getTime(); t += 60000){
-      if (nightOverlapHours(dutyEnd, new Date(t)) >= 8){
-        const restHours = (t - dutyEnd.getTime()) / 3600000;
-        return { nextStart: new Date(t), restHours, localNight: true };
-      }
+function updateLiftLandTimer(){
+  const card = document.getElementById('liftLandTimer');
+  const val = document.getElementById('liftLandValue');
+  if (!current.airborne){
+    card.classList.remove('running');
+    val.textContent = '00:00:00';
+    return;
+  }
+  const end = current.landed ? current.landed : new Date();
+  card.classList.toggle('running', !current.landed);
+  val.textContent = fmtHMS(end - current.airborne);
+}
+
+function tickClock(){
+  document.getElementById('liveClock').textContent = fmtClock(new Date());
+  tickTimers();
+  updateLiftLandTimer();
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+function updateSummary(){
+  // Block Time / Fuel Used / Mission Fuel Used summary card removed.
+}
+
+function fuelUsedBetween(f, startKey, endKey){
+  if (!f) return null;
+  const start = parseFloat(f[startKey]);
+  const end = parseFloat(f[endKey]);
+  if (isNaN(start) || isNaN(end)) return null;
+  return start - end;
+}
+function fuelUsedFor(f){
+  return fuelUsedBetween(f, 'off_blocks', 'on_blocks');
+}
+
+function capture(key){
+  current[key] = new Date();
+  document.getElementById('disp-'+key).value = toHHMM(current[key]);
+  document.getElementById('step-'+key).classList.add('done');
+  updateSummary();
+  updateLiftLandTimer();
+  let msg = `${STEP_LABELS[key] || key} - ${toHHMM(current[key])}`;
+  if (fuel[key]) msg += ` - Fuel ${fuel[key]}kg`;
+  sendTelegram(buildTelegramMessage(msg));
+}
+
+function resetLeg(){
+  current = {};
+  fuel = {};
+  hoistCount = 0;
+  document.getElementById('hoistCount').textContent = hoistCount;
+  keys.forEach(k=>{
+    document.getElementById('disp-'+k).value = '';
+    document.getElementById('step-'+k).classList.remove('done');
+  });
+  document.querySelectorAll('.fuel-input').forEach(input=> input.value = '');
+  document.getElementById('routeInput').value = '';
+  resetTimers();
+  updateSummary();
+  updateLiftLandTimer();
+}
+
+function snapshotTimer(name){
+  const t = timers[name];
+  const now = new Date();
+  const segments = t.segments.slice();
+  if (t.running && t.currentStart) segments.push({ start: t.currentStart, end: now });
+  const totalMs = segments.reduce((sum,seg)=> sum + (seg.end - seg.start), 0);
+  return {
+    start: segments.length ? segments[0].start.toISOString() : null,
+    end: segments.length ? segments[segments.length-1].end.toISOString() : null,
+    totalMinutes: Math.round(totalMs/60000),
+    periods: segments.length
+  };
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+function loadHistory(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){
+    return [];
+  }
+}
+function saveHistory(legs){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(legs));
+  }catch(e){ console.error('storage error', e); }
+}
+
+function renderHistory(legs){
+  const el = document.getElementById('historyList');
+  const totalCard = document.getElementById('totalFuelCard');
+  if (!legs.length){
+    el.innerHTML = '<div class="empty">No legs saved yet</div>';
+    totalCard.style.display = 'none';
+    return;
+  }
+  el.innerHTML = legs.slice().reverse().map(leg=>{
+    const bt = (leg.off_blocks && leg.on_blocks) ? fmtDuration(diffMinutes(new Date(leg.off_blocks), new Date(leg.on_blocks))) : '—';
+    const liftLandDur = (leg.airborne && leg.landed) ? fmtDuration(diffMinutes(new Date(leg.airborne), new Date(leg.landed))) : null;
+    const dateStr = leg.savedAt ? new Date(leg.savedAt).toLocaleDateString('en-GB') : '';
+    const mission = leg.mission && leg.mission.periods > 0
+      ? `<div class="row2"><span class="times mono">Mission ${fmtTime(new Date(leg.mission.start))} → ${fmtTime(new Date(leg.mission.end))}</span><span class="durations mono">${fmtDuration(leg.mission.totalMinutes)}</span></div>`
+      : '';
+    const legFuelUsed = fuelUsedFor(leg.fuel);
+    const fuelLabels = { off_blocks: 'Start', on_blocks: 'End', mission_start: 'Mission Start', mission_end: 'Mission End' };
+    const fuelParts = leg.fuel ? Object.entries(leg.fuel)
+      .filter(([k,v])=> v !== '' && v !== undefined && v !== null)
+      .map(([k,v])=> `${fuelLabels[k] || k}: ${v}kg`) : [];
+    const fuelLine = fuelParts.length
+      ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">${fuelParts.join(' · ')}</span>${legFuelUsed!==null ? `<span class="durations mono">Used ${legFuelUsed.toFixed(1)}kg</span>` : ''}</div>`
+      : '';
+    return `<div class="leg-card">
+      <div class="row1"><span>${leg.reg || ''}${leg.route ? ' · ' + leg.route : ''}</span><span>${dateStr}</span></div>
+      ${leg.hoistCount ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">Hoists/Slings: ${leg.hoistCount}</span></div>` : ''}
+      <div class="row2">
+        <span class="times mono">Start ${leg.off_blocks?fmtTime(new Date(leg.off_blocks)):'--:--'}</span>
+        <span class="times mono">Lift ${leg.airborne?fmtTime(new Date(leg.airborne)):'--:--'}</span>
+      </div>
+      ${mission}
+      <div class="row2">
+        <span class="times mono">Land ${leg.landed?fmtTime(new Date(leg.landed)):'--:--'}</span>
+        <span class="times mono">End ${leg.on_blocks?fmtTime(new Date(leg.on_blocks)):'--:--'}</span>
+      </div>
+      <div class="row2">
+        <span class="durations mono">Start-Stop ${bt}</span>
+        ${liftLandDur ? `<span class="durations mono">Lift-Land ${liftLandDur}</span>` : ''}
+      </div>
+      ${fuelLine}
+    </div>`;
+  }).join('');
+
+  const totalUsed = legs.reduce((sum, leg)=>{
+    const u = fuelUsedFor(leg.fuel);
+    return u !== null ? sum + u : sum;
+  }, 0);
+  const anyFuelData = legs.some(leg => fuelUsedFor(leg.fuel) !== null);
+  if (anyFuelData){
+    totalCard.style.display = 'block';
+    document.getElementById('totalFuelUsed').textContent = totalUsed.toFixed(1) + ' kg';
+  } else {
+    totalCard.style.display = 'none';
+  }
+}
+
+document.querySelectorAll('button.capture').forEach(btn=>{
+  btn.addEventListener('click', ()=> capture(btn.dataset.key));
+});
+
+document.querySelectorAll('.fuel-input').forEach(input=>{
+  input.addEventListener('input', ()=>{
+    fuel[input.dataset.fuel] = input.value;
+    updateSummary();
+  });
+});
+
+document.querySelectorAll('input.time-display').forEach(input=>{
+  input.addEventListener('change', ()=>{
+    const key = input.dataset.key;
+    if (!input.value){
+      delete current[key];
+      document.getElementById('step-'+key).classList.remove('done');
+    } else {
+      const [hh, mm] = input.value.split(':').map(Number);
+      const base = current[key] instanceof Date ? new Date(current[key]) : new Date();
+      base.setHours(hh, mm, 0, 0);
+      current[key] = base;
+      document.getElementById('step-'+key).classList.add('done');
     }
-    return { nextStart: tenHourEnd, restHours: 10, localNight: false };
-  }
+    updateSummary();
+    updateLiftLandTimer();
+  });
+});
 
-  function dayOffset(d, refDate){
-    const d0 = new Date(refDate); d0.setHours(0,0,0,0);
-    const d1 = new Date(d); d1.setHours(0,0,0,0);
-    return Math.round((d1 - d0) / 86400000);
-  }
-  function fmtShort(d, refDate){
-    const off = dayOffset(d, refDate);
-    const timeStr = d.toTimeString().slice(0,5);
-    return timeStr + (off !== 0 ? ' (' + (off > 0 ? '+' : '') + off + 'd)' : '');
-  }
+document.getElementById('start-mission').addEventListener('click', ()=> startTimer('mission'));
+document.getElementById('end-mission').addEventListener('click', ()=> endTimer('mission'));
 
-  function compute(){
-    hideWarn();
-    const start = parseDT(startDutyEl);
+document.getElementById('mission-start-time').addEventListener('change', (e)=>{
+  if (!e.target.value) return;
+  const [hh, mm] = e.target.value.split(':').map(Number);
+  const t = timers.mission;
+  const refDate = t.currentStart || (t.segments[0] && t.segments[0].start) || new Date();
+  const d = new Date(refDate);
+  d.setHours(hh, mm, 0, 0);
+  setMissionStart(d);
+});
 
-    if (!start){
-      normalDutyEndEl.textContent = '—';
-      maxFlightReadoutEl.textContent = '—';
-      maxFlightLabelEl.textContent = 'From local start time band';
-      breakGridWrapEl.innerHTML = '';
-      nextDutyDateEl.textContent = '—';
-      nextDutyTimeEl.textContent = '—:—';
-      resultTitleEl.textContent = 'Earliest next duty start';
-      secondaryLineEl.textContent = '';
-      localNightReadout.textContent = '—';
-      localNightReadout.className = 'rvalue';
-      resultNote.textContent = 'Enter a start of duty time above to begin.';
-      setGauge([]);
+document.getElementById('mission-end-time').addEventListener('change', (e)=>{
+  if (!e.target.value) return;
+  const [hh, mm] = e.target.value.split(':').map(Number);
+  const t = timers.mission;
+  const refDate = (t.segments.length && t.segments[t.segments.length-1].end) || new Date();
+  const d = new Date(refDate);
+  d.setHours(hh, mm, 0, 0);
+  setMissionEnd(d);
+});
+
+document.getElementById('hoistMinus').addEventListener('click', ()=>{
+  if (hoistCount > 0) hoistCount--;
+  document.getElementById('hoistCount').textContent = hoistCount;
+});
+document.getElementById('hoistPlus').addEventListener('click', ()=>{
+  hoistCount++;
+  document.getElementById('hoistCount').textContent = hoistCount;
+});
+
+document.getElementById('resetBtn').addEventListener('click', resetLeg);
+
+document.getElementById('saveBtn').addEventListener('click', ()=>{
+  const missionData = snapshotTimer('mission');
+  const hasFlightData = current.off_blocks || current.on_blocks || current.airborne || current.landed;
+  const hasTimerData = missionData.periods > 0;
+  if (!hasFlightData && !hasTimerData){
+    showToast('Nothing captured yet');
+    return;
+  }
+  const legs = loadHistory();
+  legs.push({
+    reg: document.getElementById('regInput').value,
+    route: document.getElementById('routeInput').value,
+    hoistCount: hoistCount,
+    off_blocks: current.off_blocks ? current.off_blocks.toISOString() : null,
+    airborne: current.airborne ? current.airborne.toISOString() : null,
+    landed: current.landed ? current.landed.toISOString() : null,
+    on_blocks: current.on_blocks ? current.on_blocks.toISOString() : null,
+    mission: missionData,
+    fuel: { ...fuel },
+    savedAt: new Date().toISOString()
+  });
+  saveHistory(legs);
+  renderHistory(legs);
+  showToast('Leg saved');
+  resetLeg();
+});
+
+function legToText(leg){
+  const lines = [];
+  lines.push(`Reg: ${leg.reg || ''}`);
+  if (leg.route) lines.push(`Route: ${leg.route}`);
+  if (leg.hoistCount) lines.push(`Hoists/Slings: ${leg.hoistCount}`);
+  lines.push(`Date: ${leg.savedAt ? new Date(leg.savedAt).toLocaleDateString('en-GB') : ''}`);
+  lines.push(`Start: ${leg.off_blocks ? fmtTime(new Date(leg.off_blocks)) : '--:--'}`);
+  lines.push(`Lift: ${leg.airborne ? fmtTime(new Date(leg.airborne)) : '--:--'}`);
+  if (leg.mission && leg.mission.periods > 0){
+    lines.push(`Mission: ${fmtTime(new Date(leg.mission.start))} -> ${fmtTime(new Date(leg.mission.end))} (${fmtDuration(leg.mission.totalMinutes)})`);
+  }
+  lines.push(`Land: ${leg.landed ? fmtTime(new Date(leg.landed)) : '--:--'}`);
+  lines.push(`End: ${leg.on_blocks ? fmtTime(new Date(leg.on_blocks)) : '--:--'}`);
+  const bt = (leg.off_blocks && leg.on_blocks) ? fmtDuration(diffMinutes(new Date(leg.off_blocks), new Date(leg.on_blocks))) : null;
+  if (bt) lines.push(`Start-Stop: ${bt}`);
+  const liftLandDur = (leg.airborne && leg.landed) ? fmtDuration(diffMinutes(new Date(leg.airborne), new Date(leg.landed))) : null;
+  if (liftLandDur) lines.push(`Lift-Land: ${liftLandDur}`);
+  const fuelLabels = { off_blocks: 'Start', on_blocks: 'End', mission_start: 'Mission Start', mission_end: 'Mission End' };
+  if (leg.fuel){
+    const fuelParts = Object.entries(leg.fuel)
+      .filter(([k,v])=> v !== '' && v !== undefined && v !== null)
+      .map(([k,v])=> `${fuelLabels[k] || k}: ${v}kg`);
+    if (fuelParts.length) lines.push(`Fuel: ${fuelParts.join(', ')}`);
+    const used = fuelUsedFor(leg.fuel);
+    if (used !== null) lines.push(`Fuel Used: ${used.toFixed(1)}kg`);
+  }
+  return lines.join('\n');
+}
+
+async function exportHistory(){
+  const legs = loadHistory();
+  if (!legs.length){
+    showToast('No legs to export');
+    return;
+  }
+  const text = legs.map(legToText).join('\n\n' + '-'.repeat(30) + '\n\n');
+  const filename = 'flight-legs-' + new Date().toISOString().slice(0,10) + '.txt';
+  const blob = new Blob([text], { type: 'text/plain' });
+
+  try {
+    const file = new File([blob], filename, { type: 'text/plain' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })){
+      await navigator.share({ files: [file], title: 'Flight Legs Export' });
+      showToast('Export shared');
       return;
     }
-
-    const theoreticalEnd = new Date(start.getTime() + 12 * 3600 * 1000);
-    normalDutyEndEl.textContent = fmtDateTime(theoreticalEnd).dateStr + ' ' + fmtDateTime(theoreticalEnd).timeStr;
-
-    // Table 1, two pilots: max flight time 8h for local start 06:00–17:59, 7h for 18:00–05:59.
-    const startMins = start.getHours() * 60 + start.getMinutes();
-    const dayBand = startMins >= 360 && startMins < 1080; // 06:00–17:59
-    maxFlightReadoutEl.textContent = dayBand ? '8:00' : '7:00';
-    maxFlightLabelEl.textContent = dayBand ? 'Start 06:00–17:59 band' : 'Start 18:00–05:59 band';
-
-    // Normal duty end: actual if entered (and valid), else the 12h theoretical max.
-    const actualEnd = parseDT(actualDutyEndEl);
-    let dutyEnd;
-    if (actualEnd){
-      if (actualEnd <= start){
-        showWarn('Actual duty end must be after the start of duty. Using the 12:00 theoretical max instead.');
-        dutyEnd = theoreticalEnd;
-      } else if (actualEnd > theoreticalEnd){
-        showWarn('Actual duty end is beyond the 12:00 max FDP for two-pilot ops — this duty period would not be compliant.');
-        dutyEnd = actualEnd;
-      } else {
-        dutyEnd = actualEnd;
-      }
-    } else {
-      dutyEnd = theoreticalEnd;
-    }
-
-    const actualDutyHours = (dutyEnd - start) / 3600000;
-    if (actualDutyHours > 11){
-      showWarn('Duty period exceeds 11 hours. Per 127.8(2)(a)(iii), the standard 9/10 hour rest is not enough here — an additional rest period must be provided under your operator\'s approved scheme.');
-    }
-
-    const { nextStart: nextDutyStart, restHours, localNight } = computeRestForDutyEnd(dutyEnd);
-    localNightReadout.textContent = (localNight ? 'Yes' : 'No') + ' · ' + fmtHM(restHours) + ' rest';
-    localNightReadout.className = 'rvalue ' + (localNight ? 'teal' : 'amber');
-
-    resultTitleEl.textContent = 'Earliest next duty start';
-    const primary = fmtDateTime(nextDutyStart);
-    nextDutyDateEl.textContent = primary.dateStr;
-    nextDutyTimeEl.textContent = primary.timeStr;
-    secondaryLineEl.textContent = fmtHM(restHours) + ' rest from duty end (' + fmtDateTime(dutyEnd).timeStr + ')';
-
-    resultNote.textContent = fmtHM(restHours) + ' minimum rest (Part 127.8(2)(a)) applied after a ' + fmtHM(actualDutyHours) + ' two-pilot duty period' + (actualEnd ? ' (actual)' : ' (12:00 max, Table 1)') + ' — local night per SACAA\'s Part 127.1 definition.';
-
-    const dutyHours = (dutyEnd - start) / 3600000;
-    setGauge([
-      { cls: 'duty', hours: dutyHours, label: 'DUTY ' + fmtHM(dutyHours) },
-      { cls: 'rest', hours: (nextDutyStart - dutyEnd) / 3600000, label: 'REST' }
-    ]);
-
-    // Split-duty break-length table — only makes sense if duty 1 stopped short of the
-    // 12h max (i.e. an actual duty end was entered). You can't split a duty that already
-    // ran the full legal 12 hours.
-    if (!actualEnd){
-      breakGridWrapEl.innerHTML = '<div class="note">Enter an actual duty end above to see split duty options — duty 1 has to stop short of the 12:00 max for a split to be possible.</div>';
-    } else {
-      const breakOptions = [4, 5, 6, 7, 8, 9];
-      let rows = '';
-      breakOptions.forEach(breakHours => {
-        const start2 = new Date(dutyEnd.getTime() + breakHours * 3600 * 1000);
-        const extensionHours = breakHours / 2; // all options are within the 3–10h band
-        const dutyEndFinal = new Date(start.getTime() + (12 + extensionHours) * 3600 * 1000);
-
-        // If duty 2 would start at or after the extended duty end, there's no usable
-        // second segment — the row is not a viable split.
-        const invalid = start2 >= dutyEndFinal;
-
-        // 7.2: a break of more than 6 consecutive hours requires a bed; up to 6h a quiet
-        // private place suffices.
-        const bedReq = breakHours > 6;
-
-        rows += '<tr class="' + (invalid ? 'row-invalid' : '') + '">' +
-          '<td class="dim">' + fmtShort(start2, start) + '</td>' +
-          '<td class="amber">' + breakHours + ':00' + (bedReq ? ' <span style="color:var(--text-dim); font-weight:400;">🛏</span>' : '') + '</td>' +
-          '<td class="teal">' + fmtShort(dutyEndFinal, start) + '</td>' +
-          '</tr>';
-      });
-
-      breakGridWrapEl.innerHTML =
-        '<div class="table-scroll"><table class="break-grid"><thead><tr>' +
-        '<th>Start duty 2</th><th>Break</th><th>Duty end</th>' +
-        '</tr></thead><tbody>' + rows + '</tbody></table></div>';
-    }
+  } catch(e){
+    if (e && e.name === 'AbortError') return;
   }
 
-  startDutyEl.value = nowLocalISO();
-  compute();
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  setTimeout(()=> URL.revokeObjectURL(url), 60000);
+  showToast('Export started');
+}
+
+document.getElementById('exportHistory').addEventListener('click', exportHistory);
+
+document.getElementById('clearHistory').addEventListener('click', ()=>{
+  saveHistory([]);
+  renderHistory([]);
+  showToast('History cleared');
+});
+
+document.getElementById('regInput').addEventListener('change', (e)=>{
+  try{ localStorage.setItem(REG_KEY, e.target.value); }catch(err){}
+});
+
+(function init(){
+  try{
+    const reg = localStorage.getItem(REG_KEY);
+    if (reg) document.getElementById('regInput').value = reg;
+    const workerUrl = localStorage.getItem(WORKER_URL_KEY);
+    if (workerUrl) document.getElementById('workerUrl').value = workerUrl;
+  }catch(e){}
+  const legs = loadHistory();
+  renderHistory(legs);
+  updateSummary();
+  renderTimer('mission');
+  tickTimers();
+})();
+
+document.getElementById('notifToggle').addEventListener('click', ()=>{
+  const panel = document.getElementById('notifPanel');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  document.getElementById('notifToggle').textContent = isOpen ? 'Notifications ▸' : 'Notifications ▾';
+});
+
+document.getElementById('tgSaveBtn').addEventListener('click', ()=>{
+  try{
+    localStorage.setItem(WORKER_URL_KEY, document.getElementById('workerUrl').value.trim());
+    showToast('Settings saved');
+  }catch(e){}
+});
+
+document.getElementById('tgTestBtn').addEventListener('click', ()=>{
+  sendTelegram(buildTelegramMessage('Test message'));
+  showToast('Test sent');
+});
+
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+
+(function(){
+  const bar = document.getElementById('doneBar');
+  const btn = document.getElementById('doneBarBtn');
+
+  function positionBar(){
+    if (window.visualViewport){
+      const vv = window.visualViewport;
+      const inset = window.innerHeight - (vv.height + vv.offsetTop);
+      bar.style.transform = inset > 0 ? `translateY(-${inset}px)` : 'translateY(0)';
+    }
+  }
+  function showBar(){
+    bar.style.display = 'flex';
+    positionBar();
+  }
+  function hideBar(){
+    bar.style.display = 'none';
+  }
+
+  document.querySelectorAll('input.fuel-input, input.reg, input.route').forEach(inp=>{
+    inp.addEventListener('focus', showBar);
+    inp.addEventListener('blur', ()=>{
+      setTimeout(()=>{
+        const active = document.activeElement;
+        if (!active || active.tagName !== 'INPUT') hideBar();
+      }, 60);
+    });
+  });
+
+  document.querySelectorAll('input.fuel-input').forEach(inp=>{
+    inp.addEventListener('focus', ()=>{
+      const len = inp.value.length;
+      setTimeout(()=> inp.setSelectionRange(len, len), 0);
+    });
+  });
+
+  btn.addEventListener('click', ()=>{
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    hideBar();
+  });
+
+  if (window.visualViewport){
+    window.visualViewport.addEventListener('resize', positionBar);
+    window.visualViewport.addEventListener('scroll', positionBar);
+  }
 })();
 </script>
-
 </body>
 </html>
