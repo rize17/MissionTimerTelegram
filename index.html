@@ -117,6 +117,14 @@
      strength so a value can be read or corrected. */
   .dimmed{ opacity: 0.5; }
   .dimmed:focus-within{ opacity: 1; }
+
+  /* Start shrinks out of the way once captured - it is history for the rest of
+     the leg. The time stays editable so it can still be corrected. */
+  .step.collapsed{ padding: 7px 16px; }
+  .step.collapsed button.capture{ display:none; }
+  .step.collapsed .time-display{ font-size: 16px; min-width: 54px; }
+  .step.collapsed .step-label .name{ font-size: 11px; }
+  .step.collapsed input.fuel-input{ font-size: 13px; padding: 5px 8px; max-width: 72px; }
   .step-label{
     display:flex; flex-direction:column; gap:3px; flex: 0 0 auto;
   }
@@ -416,7 +424,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v35';
+const APP_VERSION = 'v36';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'End' };
@@ -655,8 +663,24 @@ function legStage(){
   if (!current.on_blocks)  return 'postLand';
   return 'complete';
 }
+// Start and Lift are minutes apart, as are Land and End, so one fuel reading
+// covers each pair. Start and End are the ones that matter - Fuel Used is
+// Start minus End - so a value there drops the partner box. Only ever hidden
+// while the partner is empty, so a reading already taken is never lost.
+const FUEL_PARTNER = { airborne: 'off_blocks', landed: 'on_blocks' };
+function updateFuelVisibility(){
+  Object.keys(FUEL_PARTNER).forEach(key=>{
+    const primary = (fuel[FUEL_PARTNER[key]] || '').trim();
+    const own = (fuel[key] || '').trim();
+    document.getElementById('fuel-'+key).style.display = (primary && !own) ? 'none' : '';
+  });
+}
+
 function updateFocus(){
   const reachable = REACHABLE[legStage()];
+  // Start is history once captured, so collapse it and give the space back.
+  document.getElementById('step-off_blocks').classList.toggle('collapsed', !!current.off_blocks);
+  updateFuelVisibility();
   Object.keys(BLOCK_ELS).forEach(key=>{
     const el = document.getElementById(BLOCK_ELS[key]);
     if (!el) return;
@@ -827,6 +851,7 @@ document.querySelectorAll('.fuel-input').forEach(input=>{
   input.addEventListener('input', ()=>{
     fuel[input.dataset.fuel] = input.value;
     updateSummary();
+    updateFuelVisibility();
   });
 });
 

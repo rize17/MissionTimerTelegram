@@ -25,6 +25,14 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   Consequence: Start-Stop time accrues to whichever leg finally records the
   shutdown, covering the whole continuous run. Legs without a shutdown show
   Start-Stop as "—", so nothing is double counted.
+- **Paired fuel readings.** Start/Lift and Land/End each happen minutes apart, so
+  one reading covers the pair. Start and End are primary (Fuel Used is Start −
+  End): a value in Start hides the Lift box, a value in End hides the Land box.
+  Only hidden while the partner box is *empty*, so a reading already taken is
+  never hidden or lost. See `FUEL_PARTNER` / `updateFuelVisibility()`.
+- **Start collapses once captured** (`.step.collapsed`), roughly halving its
+  height and hiding its Capture button. The time stays editable for corrections.
+  Note this also hides the "Carried" button label on carry-over legs.
 - **Ground time** (`groundMinutes` on a saved leg) is previous leg's Land →
   this leg's Lift, and is only recorded when the previous leg had **no
   shutdown** — if the engine stopped, the gap is time parked, not ground time.
