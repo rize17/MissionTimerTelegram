@@ -26,9 +26,11 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   shutdown, covering the whole continuous run. Legs without a shutdown show
   Start-Stop as "—", so nothing is double counted.
 - **Ground time** (`groundMinutes` on a saved leg) is previous leg's Land →
-  this leg's Lift. Null when either is missing or the result is negative. It is
-  computed whenever both exist, regardless of whether the engine was shut down
-  in between.
+  this leg's Lift, and is only recorded when the previous leg had **no
+  shutdown** — if the engine stopped, the gap is time parked, not ground time.
+  Null when either time is missing or the result is negative. This is the same
+  condition that triggers the carry-over start, so the two always appear
+  together.
 
 ## Hosting
 GitHub Pages, public repo (required for Pages on the free plan), deployed from `main` branch root. No backend, no build process — files are served as-is.
