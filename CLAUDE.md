@@ -49,6 +49,21 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
 - **Start collapses once captured** (`.step.collapsed`), roughly halving its
   height and hiding its Capture button. The time stays editable for corrections.
   Note this also hides the "Carried" button label on carry-over legs.
+- **"End" is called "Shutdown"** everywhere it denotes engine shutdown (step
+  name, `STEP_LABELS`/`FUEL_LABELS`, history card, export). The Mission timer's
+  own unrelated End button (ends the hoist/sling timer) keeps its own label —
+  do not touch that one.
+- **Two cumulative top-of-page timers**, `startStopTimer` (Start → Shutdown,
+  i.e. blades turning) and `liftLandTimer` (Lift → Land), driven by
+  `totalMsBetween(startKey, endKey)`. Each sums every *saved* leg's completed
+  span plus the live in-progress segment, and keeps counting across legs until
+  Clear all empties history — at which point they naturally read zero again.
+  A continuous run's Start→Shutdown time is only ever counted once, on the leg
+  that finally records the shutdown, since carried-over legs have no
+  `on_blocks` of their own to sum. `updateLiftLandTimer()` /
+  `updateStartStopTimer()` must be called wherever the leg or history changes;
+  Clear all needs it explicitly when the leg is *not* also reset, since
+  `resetLeg()` isn't called in that branch.
 - **Ground time** (`groundMinutes` on a saved leg) is previous leg's Land →
   this leg's Lift, and is only recorded when the previous leg had **no
   shutdown** — if the engine stopped, the gap is time parked, not ground time.

@@ -132,6 +132,9 @@
     font-size: 13px; letter-spacing:0.08em; text-transform:uppercase;
     color: var(--text-dim); font-weight:700;
   }
+  /* "Shutdown" is the longest step name and needs to be smaller to fit on one
+     line with the fuel box, time and Capture button at 375px. */
+  #step-on_blocks .step-label .name{ font-size: 11px; letter-spacing:0.03em; }
   .step.done .step-label .name{ color: var(--text-dim); }
 
   .fuel-row{
@@ -166,6 +169,9 @@
     font-size: 22px; font-weight:600; color: #3a444d; min-width: 78px; text-align:right;
     flex: 0 0 auto;
   }
+  /* Give the Shutdown row's time a little room to shrink too, on top of the
+     smaller label above, so nothing overflows at 375px. */
+  #step-on_blocks .time-display{ flex: 0 1 auto; min-width: 66px; }
   .step.done .time-display{ color: var(--text); }
   input.time-display{
     -webkit-appearance:none; appearance:none; background:transparent; border:none;
@@ -319,6 +325,11 @@
     <div class="clock mono">Now &nbsp; <span id="liveClock">--:--:--</span></div>
   </div>
 
+  <div class="flight-timer" id="startStopTimer">
+    <div class="label">Start → Shutdown</div>
+    <div class="value mono" id="startStopValue">00:00:00</div>
+  </div>
+
   <div class="flight-timer" id="liftLandTimer">
     <div class="label">Lift → Land</div>
     <div class="value mono" id="liftLandValue">00:00:00</div>
@@ -394,9 +405,9 @@
   <div class="step" id="step-on_blocks" data-key="on_blocks">
     <div class="step-main">
       <div class="step-label">
-        <div class="name">End</div>
+        <div class="name">Shutdown</div>
       </div>
-      <input class="fuel-input mono" id="fuel-on_blocks" data-fuel="on_blocks" type="text" inputmode="decimal" placeholder="kg" aria-label="End fuel">
+      <input class="fuel-input mono" id="fuel-on_blocks" data-fuel="on_blocks" type="text" inputmode="decimal" placeholder="kg" aria-label="Shutdown fuel">
       <input type="time" class="time-display mono" id="disp-on_blocks" data-key="on_blocks">
       <button class="capture" data-key="on_blocks">Capture</button>
     </div>
@@ -453,17 +464,17 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v42';
+const APP_VERSION = 'v43';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
-const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'End' };
+const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
 
 // Fuel readings, listed in the order they happen during a leg.
 const FUEL_ORDER = ['off_blocks','airborne','mission_start','mission_end','landed','on_blocks'];
 const FUEL_LABELS = {
   off_blocks: 'Start', airborne: 'Lift',
   mission_start: 'Mission Start', mission_end: 'Mission End',
-  landed: 'Land', on_blocks: 'End'
+  landed: 'Land', on_blocks: 'Shutdown'
 };
 // Legs saved before Lift/Land fuel existed simply lack those keys, so they are skipped.
 function fuelPartsFor(f){
@@ -634,23 +645,45 @@ function fmtDuration(mins){
   return h + 'h ' + String(m).padStart(2,'0') + 'm';
 }
 
+// Total time between startKey and endKey across every saved leg, plus the leg
+// in progress if its startKey is captured but its endKey is not yet - so the
+// figure keeps running live rather than jumping only when a leg is saved.
+// Runs from history, so it naturally resets to zero when Clear all empties it,
+// and naturally excludes any leg whose endKey never happened (a carried-over
+// start, still open on a later leg) since that leg alone has no endKey either -
+// the whole span it belongs to is only ever counted once, on whichever leg
+// finally captures the end.
+function totalMsBetween(startKey, endKey){
+  const legs = loadHistory();
+  let ms = legs.reduce((sum, leg)=>{
+    if (leg[startKey] && leg[endKey]) return sum + (new Date(leg[endKey]) - new Date(leg[startKey]));
+    return sum;
+  }, 0);
+  if (current[startKey] && !current[endKey]) ms += (new Date() - current[startKey]);
+  return ms;
+}
+
 function updateLiftLandTimer(){
   const card = document.getElementById('liftLandTimer');
   const val = document.getElementById('liftLandValue');
-  if (!current.airborne){
-    card.classList.remove('running');
-    val.textContent = '00:00:00';
-    return;
-  }
-  const end = current.landed ? current.landed : new Date();
-  card.classList.toggle('running', !current.landed);
-  val.textContent = fmtHMS(end - current.airborne);
+  card.classList.toggle('running', !!(current.airborne && !current.landed));
+  val.textContent = fmtHMS(totalMsBetween('airborne', 'landed'));
+}
+
+// Total time the blades have been turning: Start to Shutdown, summed across
+// every leg since the history was last cleared.
+function updateStartStopTimer(){
+  const card = document.getElementById('startStopTimer');
+  const val = document.getElementById('startStopValue');
+  card.classList.toggle('running', !!(current.off_blocks && !current.on_blocks));
+  val.textContent = fmtHMS(totalMsBetween('off_blocks', 'on_blocks'));
 }
 
 function tickClock(){
   document.getElementById('liveClock').textContent = fmtClock(new Date());
   tickTimers();
   updateLiftLandTimer();
+  updateStartStopTimer();
 }
 setInterval(tickClock, 1000);
 tickClock();
@@ -673,9 +706,9 @@ function fuelUsedFor(f){
 // Only one part of a leg is live at a time. Everything else fades back, whether
 // it is already captured or not reachable yet:
 //   nothing captured -> Start
-//   Start captured   -> Lift, Mission, Land   (End is not offered until landed)
-//   Land captured    -> End
-//   End captured     -> nothing, the leg is ready to save
+//   Start captured   -> Lift, Mission, Land   (Shutdown is not offered until landed)
+//   Land captured    -> Shutdown
+//   Shutdown captured -> nothing, the leg is ready to save
 const BLOCK_ELS = {
   off_blocks: 'step-off_blocks', airborne: 'step-airborne', mission: 'timer-mission',
   landed: 'step-landed', on_blocks: 'step-on_blocks'
@@ -692,10 +725,11 @@ function legStage(){
   if (!current.on_blocks)  return 'postLand';
   return 'complete';
 }
-// Start and Lift are minutes apart, as are Land and End, so one fuel reading
-// covers each pair. Start and End are the ones that matter - Fuel Used is
-// Start minus End - so a value there drops the partner box. Only ever hidden
-// while the partner is empty, so a reading already taken is never lost.
+// Start and Lift are minutes apart, as are Land and Shutdown, so one fuel
+// reading covers each pair. Start and Shutdown are the ones that matter - Fuel
+// Used is Start minus Shutdown - so a value there drops the partner box. Only
+// ever hidden while the partner is empty, so a reading already taken is never
+// lost.
 const FUEL_PARTNER = { airborne: 'off_blocks', landed: 'on_blocks' };
 function updateFuelVisibility(){
   // On a hot load Start fuel is carried from the previous leg's shutdown, not
@@ -738,6 +772,7 @@ function capture(key){
   document.getElementById('step-'+key).classList.add('done');
   updateSummary();
   updateLiftLandTimer();
+  updateStartStopTimer();
   updateFocus();
   let msg = `${STEP_LABELS[key] || key} - ${toHHMM(current[key])}`;
   if (fuel[key]) msg += ` - Fuel ${fuel[key]}kg`;
@@ -759,6 +794,7 @@ function resetLeg(){
   applyCarryOver();
   updateSummary();
   updateLiftLandTimer();
+  updateStartStopTimer();
   updateFocus();
 }
 
@@ -862,7 +898,7 @@ function renderHistory(legs){
       ${mission}
       <div class="row2">
         <span class="times mono">Land ${leg.landed?fmtTime(new Date(leg.landed)):'--:--'}</span>
-        <span class="times mono">End ${leg.on_blocks?fmtTime(new Date(leg.on_blocks)):'--:--'}</span>
+        <span class="times mono">Shutdown ${leg.on_blocks?fmtTime(new Date(leg.on_blocks)):'--:--'}</span>
       </div>
       <div class="row2">
         <span class="durations mono">Start-Stop ${bt}</span>
@@ -921,6 +957,7 @@ document.querySelectorAll('input.time-display').forEach(input=>{
     }
     updateSummary();
     updateLiftLandTimer();
+    updateStartStopTimer();
     updateFocus();
   });
 });
@@ -1000,7 +1037,7 @@ function legToText(leg){
     lines.push(`Mission: ${fmtTime(new Date(leg.mission.start))} -> ${fmtTime(new Date(leg.mission.end))} (${fmtDuration(leg.mission.totalMinutes)})`);
   }
   lines.push(`Land: ${leg.landed ? fmtTime(new Date(leg.landed)) : '--:--'}`);
-  lines.push(`End: ${leg.on_blocks ? fmtTime(new Date(leg.on_blocks)) : '--:--'}`);
+  lines.push(`Shutdown: ${leg.on_blocks ? fmtTime(new Date(leg.on_blocks)) : '--:--'}`);
   const bt = (leg.off_blocks && leg.on_blocks) ? fmtDuration(diffMinutes(new Date(leg.off_blocks), new Date(leg.on_blocks))) : null;
   if (bt) lines.push(`Start-Stop: ${bt}`);
   const liftLandDur = (leg.airborne && leg.landed) ? fmtDuration(diffMinutes(new Date(leg.airborne), new Date(leg.landed))) : null;
@@ -1074,6 +1111,11 @@ document.getElementById('clearHistory').addEventListener('click', async ()=>{
   // progress rather than silently taking it along.
   if (await askYesNo('Also reset the leg in progress?')){
     resetLeg();
+  } else {
+    // resetLeg() already refreshes these, but if the leg is being kept, the
+    // totals still need to drop back to reflect the now-empty history.
+    updateLiftLandTimer();
+    updateStartStopTimer();
   }
   showToast('History cleared');
 });
