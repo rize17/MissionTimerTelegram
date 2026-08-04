@@ -126,6 +126,15 @@
   .step.collapsed .step-label .name{ font-size: 11px; }
   .step.collapsed input.fuel-input{ font-size: 13px; padding: 5px 8px; max-width: 72px; }
 
+  /* A carried Start (the engine kept running from the previous leg, so this
+     leg has no start of its own) isn't shown collapsed-with-a-value - that
+     still looked like something had been captured on this leg. Hide it
+     outright instead. It reappears once a leg finally records a shutdown,
+     starting the next leg's Start fresh. The carried value still exists
+     internally (current.off_blocks) for the Start-Shutdown timer, ground
+     time and Fuel Used - only the on-screen block disappears. */
+  .step.carried{ display:none; }
+
   /* Mission collapses once it is no longer live for this leg (post-Land and
      not running), same idea as Start/Shutdown but smaller chrome throughout
      rather than hiding a single button - Start/End and the hoist counter stay
@@ -483,7 +492,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v46';
+const APP_VERSION = 'v47';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };

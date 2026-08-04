@@ -35,6 +35,13 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   Capture button is disabled while carried, so a clear (easily triggered by
   opening the iOS time picker and dismissing it) would otherwise strand the leg
   with no start and no way to re-capture. Setting a different time still works.
+  **The whole Start block is hidden** (`.step.carried{ display:none }`) rather
+  than shown collapsed-with-a-value, on explicit request — showing a value
+  there looked like something had been captured on this leg when nothing was.
+  `current.off_blocks` is still set internally throughout, so the
+  Start → Shutdown timer, ground time, and Fuel Used all keep working; only the
+  on-screen block disappears. It reappears once a leg finally records a
+  shutdown, giving the next leg its own fresh, visible Start.
   Consequence: Start-Stop time accrues to whichever leg finally records the
   shutdown, covering the whole continuous run. Legs without a shutdown show
   Start-Stop as "—", so nothing is double counted.
