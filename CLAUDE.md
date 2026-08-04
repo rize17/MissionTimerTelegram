@@ -46,9 +46,16 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   **Exception:** on a carried (hot-load) leg, Start fuel is copied from the
   previous leg's shutdown-less handoff, not a fresh reading — so it never
   hides the Lift box, which still needs its own number.
-- **Start collapses once captured** (`.step.collapsed`), roughly halving its
-  height and hiding its Capture button. The time stays editable for corrections.
-  Note this also hides the "Carried" button label on carry-over legs.
+- **Start and Shutdown collapse once captured** (`.step.collapsed`), roughly
+  halving their height and hiding the Capture button. The time (and Start's
+  fuel) stays editable for corrections. Note this also hides the "Carried"
+  button label on carry-over legs.
+- **Mission collapses too, but stays fully working.** Triggered by the same
+  `dim` condition already computed per-key in `updateFocus()` (not reachable
+  and not running), via `.timer-card.collapsed`. Unlike Start/Shutdown, its
+  Start/End buttons and hoist counter are **not** hidden, only shrunk — the
+  mission timer can be started again later in the same leg (e.g. after a
+  second landing), so nothing here should become unreachable.
 - **"End" is called "Shutdown"** everywhere it denotes engine shutdown (step
   name, `STEP_LABELS`/`FUEL_LABELS`, history card, export). The Mission timer's
   own unrelated End button (ends the hoist/sling timer) keeps its own label —
@@ -64,6 +71,8 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   `updateStartStopTimer()` must be called wherever the leg or history changes;
   Clear all needs it explicitly when the leg is *not* also reset, since
   `resetLeg()` isn't called in that branch.
+  Start → Shutdown is positioned just above the Saved Legs history, not at the
+  top with Lift → Land - that placement was a deliberate, explicit request.
 - **Ground time** (`groundMinutes` on a saved leg) is previous leg's Land →
   this leg's Lift, and is only recorded when the previous leg had **no
   shutdown** — if the engine stopped, the gap is time parked, not ground time.

@@ -125,6 +125,19 @@
   .step.collapsed .time-display{ font-size: 16px; min-width: 54px; }
   .step.collapsed .step-label .name{ font-size: 11px; }
   .step.collapsed input.fuel-input{ font-size: 13px; padding: 5px 8px; max-width: 72px; }
+
+  /* Mission collapses once it is no longer live for this leg (post-Land and
+     not running), same idea as Start/Shutdown but smaller chrome throughout
+     rather than hiding a single button - Start/End and the hoist counter stay
+     fully working, since the mission timer can still be started again. */
+  .timer-card.collapsed{ padding: 10px 14px; }
+  .timer-card.collapsed .timer-top{ margin-bottom: 2px; }
+  .timer-card.collapsed .timer-big{ font-size: 18px; margin: 2px 0 6px; }
+  .timer-card.collapsed .hoist-btn{ width: 24px; height: 24px; font-size: 15px; }
+  .timer-card.collapsed .hoist-value{ font-size: 16px; min-width: 18px; }
+  .timer-card.collapsed .fuel-row{ margin-top: 6px; padding-top: 6px; }
+  .timer-card.collapsed .fuel-row input.fuel-input{ font-size: 13px; padding: 6px 8px; }
+  .timer-card.collapsed button.btn-timer{ padding: 8px 0 !important; font-size: 12px !important; }
   .step-label{
     display:flex; flex-direction:column; gap:3px; flex: 0 0 auto;
   }
@@ -325,11 +338,6 @@
     <div class="clock mono">Now &nbsp; <span id="liveClock">--:--:--</span></div>
   </div>
 
-  <div class="flight-timer" id="startStopTimer">
-    <div class="label">Start → Shutdown</div>
-    <div class="value mono" id="startStopValue">00:00:00</div>
-  </div>
-
   <div class="flight-timer" id="liftLandTimer">
     <div class="label">Lift → Land</div>
     <div class="value mono" id="liftLandValue">00:00:00</div>
@@ -418,6 +426,11 @@
     <button class="btn btn-save" id="saveBtn">Save Leg</button>
   </div>
 
+  <div class="flight-timer" id="startStopTimer" style="margin-top:18px;">
+    <div class="label">Start → Shutdown</div>
+    <div class="value mono" id="startStopValue">00:00:00</div>
+  </div>
+
   <div class="history">
     <h2>Saved Legs <span><button id="exportHistory" style="color:var(--green); margin-right:10px;">Export</button><button id="clearHistory">Clear all</button></span></h2>
     <div id="historyList"><div class="empty">No legs saved yet</div></div>
@@ -464,7 +477,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v43';
+const APP_VERSION = 'v44';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -748,17 +761,21 @@ function updateFuelVisibility(){
 
 function updateFocus(){
   const reachable = REACHABLE[legStage()];
-  // Start is history once captured, so collapse it and give the space back.
+  // Start and Shutdown are history once captured - collapse them and give the
+  // space back. The time (and, for Start, the fuel) stays editable.
   document.getElementById('step-off_blocks').classList.toggle('collapsed', !!current.off_blocks);
+  document.getElementById('step-on_blocks').classList.toggle('collapsed', !!current.on_blocks);
   updateFuelVisibility();
   Object.keys(BLOCK_ELS).forEach(key=>{
     const el = document.getElementById(BLOCK_ELS[key]);
     if (!el) return;
     let dim;
     if (key === 'mission'){
-      // The mission card has no capture time of its own, and has to stay
-      // visible whenever its timer is actually running.
+      // The mission card has no capture time of its own, and has to stay full
+      // size and visible whenever its timer is actually running - it might be
+      // started again later in the same leg.
       dim = timers.mission.running ? false : !reachable.includes(key);
+      el.classList.toggle('collapsed', dim);
     } else {
       dim = !!current[key] || !reachable.includes(key);
     }
