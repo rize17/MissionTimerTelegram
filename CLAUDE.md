@@ -12,6 +12,24 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
 - `manifest.json` — web app manifest (name, icons, standalone display mode)
 - `icon-180.png`, `icon-192.png`, `icon-152.png`, `icon-167.png`, `icon-1024.png` — Home Screen icons
 
+## Leg flow rules
+- **One live block at a time.** Everything else fades to 50% (`.dimmed`), whether
+  already captured or not yet reachable. Stages, driven by `legStage()`:
+  nothing captured → Start; Start captured → Lift + Mission + Land (End stays
+  faded until landed); Land captured → End; End captured → nothing.
+  Faded blocks are still fully usable, and tapping into one restores it.
+- **Carry-over start.** If the previous saved leg has no End (`on_blocks`), the
+  engine never shut down, so the next leg has no new engine start. Its Start
+  time is copied from that leg and its Capture button reads "Carried" and is
+  disabled. Start fuel is deliberately *not* carried — it is a fresh reading.
+  Consequence: Start-Stop time accrues to whichever leg finally records the
+  shutdown, covering the whole continuous run. Legs without a shutdown show
+  Start-Stop as "—", so nothing is double counted.
+- **Ground time** (`groundMinutes` on a saved leg) is previous leg's Land →
+  this leg's Lift. Null when either is missing or the result is negative. It is
+  computed whenever both exist, regardless of whether the engine was shut down
+  in between.
+
 ## Hosting
 GitHub Pages, public repo (required for Pages on the free plan), deployed from `main` branch root. No backend, no build process — files are served as-is.
 

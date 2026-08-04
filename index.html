@@ -107,15 +107,16 @@
   .step-main{
     display:flex; align-items:center; justify-content:space-between; gap: 8px;
   }
-  /* A captured step fades back so the next one to do is the obvious one. It
-     stays fully usable - tapping any field in it brings it back to full
-     strength so you can read or correct the value. */
   .step.done{
-    opacity: 0.5;
     border-color: var(--line);
     background: var(--panel);
   }
-  .step.done:focus-within{ opacity: 1; }
+  /* Anything that is not what you should be doing right now fades back, so the
+     live block is the obvious one: already captured, or not reachable yet.
+     Faded blocks stay fully usable - tapping into one restores it to full
+     strength so a value can be read or corrected. */
+  .dimmed{ opacity: 0.5; }
+  .dimmed:focus-within{ opacity: 1; }
   .step-label{
     display:flex; flex-direction:column; gap:3px; flex: 0 0 auto;
   }
@@ -175,6 +176,9 @@
     transition: transform .08s ease, background .12s ease;
   }
   button.capture:active{ transform: scale(0.96); background:#1e262e; }
+  /* Start carried over from a leg that was never shut down - nothing to capture. */
+  button.capture:disabled{ cursor: default; }
+  button.capture:disabled:active{ transform: none; }
   .step.done button.capture{
     background: var(--panel-raised); color: var(--text-dim); border-color: #2a343d;
   }
@@ -187,6 +191,7 @@
   .timer-card{
     background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
     padding: 16px 18px; margin-bottom: 12px;
+    transition: opacity .15s ease;
   }
   .timer-card.running{ border-color: var(--amber-dim); background: linear-gradient(180deg, #221a0c, #171310); }
   .timer-top{ display:flex; justify-content:space-between; align-items:stretch; margin-bottom:10px; }
@@ -411,7 +416,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v33';
+const APP_VERSION = 'v34';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'End' };
@@ -482,6 +487,7 @@ function startTimer(name){
   t.running = true;
   t.currentStart = new Date();
   renderTimer(name);
+  updateFocus();
   if (name === 'mission'){
     let msg = `Mission Start - ${toHHMM(t.currentStart)}`;
     if (fuel['mission_start']) msg += ` - Fuel ${fuel['mission_start']}kg`;
@@ -496,6 +502,7 @@ function endTimer(name){
   t.running = false;
   t.currentStart = null;
   renderTimer(name);
+  updateFocus();
   if (name === 'mission'){
     const totalMs = t.segments.reduce((sum,seg)=> sum + (seg.end - seg.start), 0);
     const durMins = Math.round(totalMs / 60000);
@@ -626,12 +633,52 @@ function fuelUsedFor(f){
   return fuelUsedBetween(f, 'off_blocks', 'on_blocks');
 }
 
+// Only one part of a leg is live at a time. Everything else fades back, whether
+// it is already captured or not reachable yet:
+//   nothing captured -> Start
+//   Start captured   -> Lift, Mission, Land   (End is not offered until landed)
+//   Land captured    -> End
+//   End captured     -> nothing, the leg is ready to save
+const BLOCK_ELS = {
+  off_blocks: 'step-off_blocks', airborne: 'step-airborne', mission: 'timer-mission',
+  landed: 'step-landed', on_blocks: 'step-on_blocks'
+};
+const REACHABLE = {
+  preStart: ['off_blocks'],
+  airborne: ['airborne','mission','landed'],
+  postLand: ['on_blocks'],
+  complete: []
+};
+function legStage(){
+  if (!current.off_blocks) return 'preStart';
+  if (!current.landed)     return 'airborne';
+  if (!current.on_blocks)  return 'postLand';
+  return 'complete';
+}
+function updateFocus(){
+  const reachable = REACHABLE[legStage()];
+  Object.keys(BLOCK_ELS).forEach(key=>{
+    const el = document.getElementById(BLOCK_ELS[key]);
+    if (!el) return;
+    let dim;
+    if (key === 'mission'){
+      // The mission card has no capture time of its own, and has to stay
+      // visible whenever its timer is actually running.
+      dim = timers.mission.running ? false : !reachable.includes(key);
+    } else {
+      dim = !!current[key] || !reachable.includes(key);
+    }
+    el.classList.toggle('dimmed', dim);
+  });
+}
+
 function capture(key){
   current[key] = new Date();
   document.getElementById('disp-'+key).value = toHHMM(current[key]);
   document.getElementById('step-'+key).classList.add('done');
   updateSummary();
   updateLiftLandTimer();
+  updateFocus();
   let msg = `${STEP_LABELS[key] || key} - ${toHHMM(current[key])}`;
   if (fuel[key]) msg += ` - Fuel ${fuel[key]}kg`;
   sendTelegram(buildTelegramMessage(msg));
@@ -649,8 +696,36 @@ function resetLeg(){
   document.querySelectorAll('.fuel-input').forEach(input=> input.value = '');
   document.getElementById('routeInput').value = '';
   resetTimers();
+  applyCarryOver();
   updateSummary();
   updateLiftLandTimer();
+  updateFocus();
+}
+
+// A leg that was never shut down means the engine is still running, so the next
+// leg has no new engine start of its own. Carry the original Start forward and
+// lock it - there is nothing to capture. Fuel is left blank and still editable,
+// since that is a fresh reading.
+function applyCarryOver(){
+  const prev = loadHistory().slice(-1)[0];
+  const carry = !!(prev && prev.off_blocks && !prev.on_blocks);
+  if (carry){
+    current.off_blocks = new Date(prev.off_blocks);
+    document.getElementById('disp-off_blocks').value = toHHMM(current.off_blocks);
+    document.getElementById('step-off_blocks').classList.add('done');
+  }
+  const step = document.getElementById('step-off_blocks');
+  const btn = step.querySelector('button.capture');
+  step.classList.toggle('carried', carry);
+  btn.disabled = carry;
+  btn.textContent = carry ? 'Carried' : 'Capture';
+}
+
+// Time spent on the ground between the previous leg landing and this one lifting.
+function groundMinutesFor(prevLeg, liftDate){
+  if (!prevLeg || !prevLeg.landed || !liftDate) return null;
+  const mins = diffMinutes(new Date(prevLeg.landed), liftDate);
+  return mins >= 0 ? mins : null;
 }
 
 function snapshotTimer(name){
@@ -724,6 +799,7 @@ function renderHistory(legs){
         <span class="durations mono">Start-Stop ${bt}</span>
         ${liftLandDur ? `<span class="durations mono">Lift-Land ${liftLandDur}</span>` : ''}
       </div>
+      ${typeof leg.groundMinutes === 'number' ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">Ground since previous land</span><span class="durations mono">${fmtDuration(leg.groundMinutes)}</span></div>` : ''}
       ${fuelLine}
     </div>`;
   }).join('');
@@ -767,6 +843,7 @@ document.querySelectorAll('input.time-display').forEach(input=>{
     }
     updateSummary();
     updateLiftLandTimer();
+    updateFocus();
   });
 });
 
@@ -813,10 +890,12 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
     return;
   }
   const legs = loadHistory();
+  const prevLeg = legs[legs.length - 1];
   legs.push({
     reg: document.getElementById('regInput').value,
     route: document.getElementById('routeInput').value,
     hoistCount: hoistCount,
+    groundMinutes: groundMinutesFor(prevLeg, current.airborne || null),
     off_blocks: current.off_blocks ? current.off_blocks.toISOString() : null,
     airborne: current.airborne ? current.airborne.toISOString() : null,
     landed: current.landed ? current.landed.toISOString() : null,
@@ -848,6 +927,7 @@ function legToText(leg){
   if (bt) lines.push(`Start-Stop: ${bt}`);
   const liftLandDur = (leg.airborne && leg.landed) ? fmtDuration(diffMinutes(new Date(leg.airborne), new Date(leg.landed))) : null;
   if (liftLandDur) lines.push(`Lift-Land: ${liftLandDur}`);
+  if (typeof leg.groundMinutes === 'number') lines.push(`Ground since previous land: ${fmtDuration(leg.groundMinutes)}`);
   if (leg.fuel){
     const fuelParts = fuelPartsFor(leg.fuel);
     if (fuelParts.length) lines.push(`Fuel: ${fuelParts.join(', ')}`);
@@ -905,7 +985,9 @@ document.getElementById('regInput').addEventListener('change', (e)=>{
   }catch(e){}
   const legs = loadHistory();
   renderHistory(legs);
+  applyCarryOver();
   updateSummary();
+  updateFocus();
   renderTimer('mission');
   tickTimers();
 })();
