@@ -29,7 +29,12 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
 - **Carry-over start.** If the previous saved leg has no End (`on_blocks`), the
   engine never shut down, so the next leg has no new engine start. Its Start
   time is copied from that leg and its Capture button reads "Carried" and is
-  disabled. Start fuel is deliberately *not* carried — it is a fresh reading.
+  disabled. The previous leg's **Start fuel is carried across too**, since the
+  engine has been running since that reading. Both stay editable.
+  Clearing a carried Start time **restores it** rather than deleting it — the
+  Capture button is disabled while carried, so a clear (easily triggered by
+  opening the iOS time picker and dismissing it) would otherwise strand the leg
+  with no start and no way to re-capture. Setting a different time still works.
   Consequence: Start-Stop time accrues to whichever leg finally records the
   shutdown, covering the whole continuous run. Legs without a shutdown show
   Start-Stop as "—", so nothing is double counted.

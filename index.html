@@ -424,7 +424,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v37';
+const APP_VERSION = 'v38';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'End' };
@@ -737,6 +737,13 @@ function applyCarryOver(){
     current.off_blocks = new Date(prev.off_blocks);
     document.getElementById('disp-off_blocks').value = toHHMM(current.off_blocks);
     document.getElementById('step-off_blocks').classList.add('done');
+    // The engine has been running since that start, so its fuel reading still
+    // applies to this leg. Carry it across too, and leave it editable.
+    const prevStartFuel = prev.fuel && prev.fuel.off_blocks;
+    if (prevStartFuel){
+      fuel.off_blocks = prevStartFuel;
+      document.getElementById('fuel-off_blocks').value = prevStartFuel;
+    }
   }
   const step = document.getElementById('step-off_blocks');
   const btn = step.querySelector('button.capture');
@@ -859,8 +866,16 @@ document.querySelectorAll('input.time-display').forEach(input=>{
   input.addEventListener('change', ()=>{
     const key = input.dataset.key;
     if (!input.value){
-      delete current[key];
-      document.getElementById('step-'+key).classList.remove('done');
+      // A carried start belongs to the previous leg, not to anything typed
+      // here, and its Capture button is disabled - so clearing it (easily done
+      // by opening the iOS time picker and dismissing it) would strand the leg
+      // with no start and no way to re-capture one. Put it back instead.
+      if (key === 'off_blocks' && document.getElementById('step-off_blocks').classList.contains('carried')){
+        applyCarryOver();
+      } else {
+        delete current[key];
+        document.getElementById('step-'+key).classList.remove('done');
+      }
     } else {
       const [hh, mm] = input.value.split(':').map(Number);
       const base = current[key] instanceof Date ? new Date(current[key]) : new Date();
