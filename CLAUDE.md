@@ -6,6 +6,9 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
 ## Files in this repo
 - `index.html` — the entire app (HTML/CSS/JS, no build step, no framework)
 - `sw.js` — service worker for offline caching. **Bump `CACHE_NAME` every time index.html changes**, or iOS will keep serving a stale cached copy.
+  Bump `APP_VERSION` in `index.html` to the same number at the same time — it
+  is shown next to the title in the header so the user can confirm which build
+  the phone is actually running.
 - `manifest.json` — web app manifest (name, icons, standalone display mode)
 - `icon-180.png`, `icon-192.png`, `icon-152.png`, `icon-167.png`, `icon-1024.png` — Home Screen icons
 
@@ -43,5 +46,5 @@ Constraints found when this was scoped (2026-08-04), to plan around later:
 ## Working conventions established so far
 - User is non-technical-by-background but capable; give clear step-by-step instructions when something needs doing outside the code (GitHub, Cloudflare dashboard, Telegram/BotFather)
 - User tests exclusively on an iPhone via Safari / Home Screen — always consider iOS Safari quirks (native time pickers, `data:` URLs can't be added to Home Screen, `type="number"` inputs can't have cursor position set, etc.)
-- Always bump `sw.js` cache version after any change to `index.html`, or changes won't show up on the deployed Home Screen app
+- Always bump the version after any change to `index.html`, or changes won't show up on the deployed Home Screen app. Two places, same number: `CACHE_NAME` in `sw.js` and `APP_VERSION` in `index.html`.
 - User prefers minimal/native-feeling UI — avoid adding extra confirmation dialogs or non-native controls where iOS already provides one

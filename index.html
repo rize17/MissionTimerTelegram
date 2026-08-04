@@ -62,6 +62,10 @@
   header .header-right{
     display:flex; flex-direction:column; align-items:flex-end; gap:4px;
   }
+  header .header-left{ display:flex; align-items:baseline; gap:8px; }
+  header .app-version{
+    font-size: 11px; color: #4a5560; letter-spacing: 0.06em; font-weight:600;
+  }
   .route-clock-row{
     display:flex; justify-content:space-between; align-items:baseline;
     margin-bottom: 22px;
@@ -98,15 +102,20 @@
     border-radius: 14px;
     padding: 14px 16px;
     margin-bottom: 12px;
-    transition: border-color .15s ease, background .15s ease;
+    transition: border-color .15s ease, background .15s ease, opacity .15s ease;
   }
   .step-main{
     display:flex; align-items:center; justify-content:space-between; gap: 8px;
   }
+  /* A captured step fades back so the next one to do is the obvious one. It
+     stays fully usable - tapping any field in it brings it back to full
+     strength so you can read or correct the value. */
   .step.done{
-    border-color: var(--green-dim);
-    background: linear-gradient(180deg, #12211b, #11191a);
+    opacity: 0.5;
+    border-color: var(--line);
+    background: var(--panel);
   }
+  .step.done:focus-within{ opacity: 1; }
   .step-label{
     display:flex; flex-direction:column; gap:3px; flex: 0 0 auto;
   }
@@ -114,7 +123,7 @@
     font-size: 13px; letter-spacing:0.08em; text-transform:uppercase;
     color: var(--text-dim); font-weight:700;
   }
-  .step.done .step-label .name{ color: var(--green); }
+  .step.done .step-label .name{ color: var(--text-dim); }
 
   .fuel-row{
     display:flex; align-items:center; justify-content:flex-end; gap:8px;
@@ -167,7 +176,7 @@
   }
   button.capture:active{ transform: scale(0.96); background:#1e262e; }
   .step.done button.capture{
-    background: var(--green-dim); color: #d8ffe9; border-color: var(--green);
+    background: var(--panel-raised); color: var(--text-dim); border-color: #2a343d;
   }
 
   .section-label{
@@ -264,7 +273,10 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>Mission Timer</h1>
+    <div class="header-left">
+      <h1>Mission Timer</h1>
+      <span class="app-version mono" id="appVersion"></span>
+    </div>
     <div class="header-right">
       <input class="reg mono" id="regInput" placeholder="Reg" maxlength="10">
     </div>
@@ -397,6 +409,11 @@
 const STORAGE_KEY = 'flight-timer:legs';
 const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
+// Shown in the header so you can tell at a glance which build the phone is
+// running. Keep this in step with CACHE_NAME in sw.js - bump both together.
+const APP_VERSION = 'v33';
+document.getElementById('appVersion').textContent = APP_VERSION;
+
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'End' };
 
 // Fuel readings, listed in the order they happen during a leg.
