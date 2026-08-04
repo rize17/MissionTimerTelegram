@@ -424,7 +424,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v38';
+const APP_VERSION = 'v39';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'End' };
@@ -1011,6 +1011,9 @@ document.getElementById('exportHistory').addEventListener('click', exportHistory
 document.getElementById('clearHistory').addEventListener('click', ()=>{
   saveHistory([]);
   renderHistory([]);
+  // History is what carry-over reads from, so the leg in progress has to go as
+  // well - otherwise a carried start would linger with nothing behind it.
+  resetLeg();
   showToast('History cleared');
 });
 
