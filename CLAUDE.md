@@ -24,8 +24,21 @@ GitHub Pages, public repo (required for Pages on the free plan), deployed from `
   Mission End - 16:45 (Duration: 0h 23m) - Fuel 720kg - Hoists/Slings 3
   ```
 
-## Next task: migrate notifications from Telegram to WhatsApp
-Key constraint discovered during Telegram build: **WhatsApp has no simple free way to auto-send without a human tapping Send** — only `wa.me` links that pre-fill a message. True automatic sending requires Meta's WhatsApp Business Cloud API, which needs business verification and a backend to hold access tokens (the existing Cloudflare Worker could likely be extended for this). Need to decide: accept manual-tap links, or build out the Business API path.
+## WhatsApp migration — PARKED, revisit only when the user raises it
+Telegram works and stays for now. WhatsApp is still on the table but is **not
+the active task** — do not start it unless the user explicitly asks.
+
+Constraints found when this was scoped (2026-08-04), to plan around later:
+- No free way to auto-send without a human tapping Send — `wa.me` links only
+  pre-fill a message, which defeats the point of automatic notifications at
+  Lift/Land (exactly the moments the pilot is busiest).
+- Real auto-send needs Meta's WhatsApp Business Cloud API: business
+  verification, per-message billing, and pre-approved message templates with a
+  fixed structure. The current messages are variable-shape (fuel and
+  hoists/slings only appear sometimes), so they don't fit a template as-is.
+- The Cloud API cannot post into a normal WhatsApp group. Its Groups API only
+  works with groups the API itself creates, caps them at 8 participants, and
+  requires an Official Business Account.
 
 ## Working conventions established so far
 - User is non-technical-by-background but capable; give clear step-by-step instructions when something needs doing outside the code (GitHub, Cloudflare dashboard, Telegram/BotFather)
