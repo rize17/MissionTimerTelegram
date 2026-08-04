@@ -132,12 +132,18 @@
      fully working, since the mission timer can still be started again. */
   .timer-card.collapsed{ padding: 10px 14px; }
   .timer-card.collapsed .timer-top{ margin-bottom: 2px; }
-  .timer-card.collapsed .timer-big{ font-size: 18px; margin: 2px 0 6px; }
+  .timer-card.collapsed .timer-big{ font-size: 16px; margin: 0 0 4px; }
   .timer-card.collapsed .hoist-btn{ width: 24px; height: 24px; font-size: 15px; }
   .timer-card.collapsed .hoist-value{ font-size: 16px; min-width: 18px; }
   .timer-card.collapsed .fuel-row{ margin-top: 6px; padding-top: 6px; }
   .timer-card.collapsed .fuel-row input.fuel-input{ font-size: 13px; padding: 6px 8px; }
   .timer-card.collapsed button.btn-timer{ padding: 8px 0 !important; font-size: 12px !important; }
+  /* The start/end time range is empty chrome until a segment exists, and the
+     End row (fuel + button) is meaningless before Start has been pressed -
+     both only earn their space once the mission timer is actually running,
+     at which point the card is no longer .collapsed and they reappear. */
+  .timer-card.collapsed .timer-sub{ display:none; }
+  .timer-card.collapsed .mission-end-row{ display:none; }
   .step-label{
     display:flex; flex-direction:column; gap:3px; flex: 0 0 auto;
   }
@@ -390,7 +396,7 @@
       </div>
       <button class="btn-timer" id="start-mission" data-timer="mission" style="width:100px; padding:12px 0; font-size:14px;">Start</button>
     </div>
-    <div class="fuel-row" style="justify-content:space-between;">
+    <div class="fuel-row mission-end-row" style="justify-content:space-between;">
       <div style="display:flex; align-items:center; gap:10px;">
         <label for="fuel-mission_end" style="width:34px;">Fuel</label>
         <input class="fuel-input mono" id="fuel-mission_end" data-fuel="mission_end" type="text" inputmode="decimal" placeholder="kg">
@@ -477,7 +483,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v45';
+const APP_VERSION = 'v46';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -775,7 +781,11 @@ function updateFocus(){
       // size and visible whenever its timer is actually running - it might be
       // started again later in the same leg.
       dim = timers.mission.running ? false : !reachable.includes(key);
-      el.classList.toggle('collapsed', dim);
+      // Collapse is deliberately its own condition, not tied to dim: sitting
+      // idle-but-reachable between Lift and Land (in flight, hoists not yet
+      // started) is exactly the "not using it right now" case that should
+      // shrink, even though it stays undimmed and legible while reachable.
+      el.classList.toggle('collapsed', !timers.mission.running);
     } else {
       dim = !!current[key] || !reachable.includes(key);
     }

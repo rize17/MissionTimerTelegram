@@ -50,12 +50,17 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   halving their height and hiding the Capture button. The time (and Start's
   fuel) stays editable for corrections. Note this also hides the "Carried"
   button label on carry-over legs.
-- **Mission collapses too, but stays fully working.** Triggered by the same
-  `dim` condition already computed per-key in `updateFocus()` (not reachable
-  and not running), via `.timer-card.collapsed`. Unlike Start/Shutdown, its
-  Start/End buttons and hoist counter are **not** hidden, only shrunk — the
-  mission timer can be started again later in the same leg (e.g. after a
-  second landing), so nothing here should become unreachable.
+- **Mission collapses whenever it is not actively running**, via
+  `.timer-card.collapsed` - deliberately **not** the same condition as its
+  `dim` state. Sitting idle-but-reachable between Lift and Land (in flight,
+  hoists not yet started) is exactly the "not using it right now" case that
+  should shrink, even though it stays undimmed and legible while reachable.
+  Collapsed, the End row (`.mission-end-row`) and the start/end time range
+  (`.timer-sub`) are hidden entirely - both are meaningless before Start has
+  been pressed - but the Start button and hoist +/- counter stay visible and
+  fully working, since starting the mission timer or logging a hoist/sling are
+  exactly the actions you'd want to take from the collapsed state. Expands
+  automatically the instant the mission timer starts running.
 - **"End" is called "Shutdown"** everywhere it denotes engine shutdown (step
   name, `STEP_LABELS`/`FUEL_LABELS`, history card, export). The Mission timer's
   own unrelated End button (ends the hoist/sling timer) keeps its own label —
