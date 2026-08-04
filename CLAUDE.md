@@ -100,6 +100,25 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   condition that triggers the carry-over start, so the two always appear
   together.
 
+## Totals summary (below Saved Legs)
+Four rows, each hidden unless at least one saved leg contributes, so the card
+never shows a bare zero for something simply never recorded. The whole card
+hides when none apply.
+- **Total Flying Time** — sum of Lift → Land per leg.
+- **Total Ground Time** — sum of the per-leg `groundMinutes`, so it inherits
+  that field's "engine kept running only" rule and matches the leg cards.
+- **Total Fuel Used** — sum of `fuelUsedFor` (Start − Shutdown) per leg.
+- **Total Fuel Uploaded** — refuelling inferred between legs: more fuel on
+  board at the start of a leg than at the end of the previous one.
+  `legEndFuel()` is Land, falling back to Shutdown; `legStartFuel()` is Start,
+  falling back to Lift. The fallbacks matter because the paired-fuel rule
+  routinely leaves one box of each pair empty by design. A **carried** Start is
+  never used as a start reading — it's copied from the previous leg's engine
+  start and is stale — so a hot-load leg falls through to its Lift reading.
+  Computed at render time from adjacent legs (not stored on the leg), so legs
+  saved before this existed still get it. Also shown per-leg on the history
+  card and in the export as "Fuel uploaded since previous leg".
+
 ## Confirmation dialogs
 `window.confirm()` renders as OK/Cancel on iOS Safari with no way to relabel
 the buttons. Anywhere a Yes/No question is needed (e.g. "Also reset the leg in

@@ -452,9 +452,21 @@
   </div>
 
   <div class="summary" id="totalFuelCard" style="margin-top:14px; display:none;">
-    <div class="summary-row">
-      <div class="label">Total Fuel Used (all legs)</div>
+    <div class="summary-row" id="rowFlyingTime">
+      <div class="label">Total Flying Time</div>
+      <div class="value mono" id="totalFlyingTime">—</div>
+    </div>
+    <div class="summary-row" id="rowGroundTime">
+      <div class="label">Total Ground Time</div>
+      <div class="value mono" id="totalGroundTime">—</div>
+    </div>
+    <div class="summary-row" id="rowFuelUsed">
+      <div class="label">Total Fuel Used</div>
       <div class="value mono" id="totalFuelUsed">—</div>
+    </div>
+    <div class="summary-row" id="rowFuelUploaded">
+      <div class="label">Total Fuel Uploaded</div>
+      <div class="value mono" id="totalFuelUploaded">—</div>
     </div>
   </div>
 
@@ -492,7 +504,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v49';
+const APP_VERSION = 'v50';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -731,6 +743,40 @@ function fuelUsedFor(f){
   return fuelUsedBetween(f, 'off_blocks', 'on_blocks');
 }
 
+// Fuel on board at the end of a leg. Land is the reading meant for this, but
+// the pairing rule hides that box when a Shutdown reading was taken instead,
+// so fall back to it.
+function legEndFuel(leg){
+  const f = leg.fuel || {};
+  const land = parseFloat(f.landed);
+  if (!isNaN(land)) return land;
+  const shutdown = parseFloat(f.on_blocks);
+  return isNaN(shutdown) ? null : shutdown;
+}
+// Fuel on board at the start of a leg, same idea in reverse. A *carried* Start
+// is copied from the previous leg's engine start and is stale by definition,
+// so it is never used here - a hot-load leg has its own Lift reading instead.
+function legStartFuel(leg){
+  const f = leg.fuel || {};
+  if (!leg.startCarried){
+    const start = parseFloat(f.off_blocks);
+    if (!isNaN(start)) return start;
+  }
+  const lift = parseFloat(f.airborne);
+  return isNaN(lift) ? null : lift;
+}
+// Fuel put in between two legs: more on board at the start of this one than
+// there was at the end of the last. Computed at render time rather than stored,
+// so legs saved before this existed get it too.
+function uploadedBetween(prevLeg, leg){
+  if (!prevLeg || !leg) return null;
+  const before = legEndFuel(prevLeg);
+  const after = legStartFuel(leg);
+  if (before === null || after === null) return null;
+  const diff = after - before;
+  return diff > 0 ? diff : null;
+}
+
 // Only one part of a leg is live at a time. Everything else fades back, whether
 // it is already captured or not reachable yet:
 //   nothing captured -> Start
@@ -912,7 +958,8 @@ function renderHistory(legs){
     totalCard.style.display = 'none';
     return;
   }
-  el.innerHTML = legs.map(leg=>{
+  el.innerHTML = legs.map((leg, i)=>{
+    const uploadedKg = uploadedBetween(legs[i-1], leg);
     // Null rather than a dash when there was no shutdown - the whole row is
     // dropped instead, matching the export.
     const bt = (leg.off_blocks && leg.on_blocks) ? fmtDuration(diffMinutes(new Date(leg.off_blocks), new Date(leg.on_blocks))) : null;
@@ -943,21 +990,44 @@ function renderHistory(legs){
         ${liftLandDur ? `<span class="durations mono">Lift-Land ${liftLandDur}</span>` : ''}
       </div>` : ''}
       ${typeof leg.groundMinutes === 'number' ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">Ground since previous land</span><span class="durations mono">${fmtDuration(leg.groundMinutes)}</span></div>` : ''}
+      ${uploadedKg !== null ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">Fuel uploaded since previous leg</span><span class="durations mono">+${uploadedKg.toFixed(1)}kg</span></div>` : ''}
       ${fuelLine}
     </div>`;
   }).join('');
 
-  const totalUsed = legs.reduce((sum, leg)=>{
+  // Totals across every saved leg. Each row is hidden unless at least one leg
+  // contributed to it, so the card never shows a bare "0" for something that
+  // was simply never recorded.
+  let flyingMins = 0, anyFlying = false;
+  let groundMins = 0, anyGround = false;
+  let fuelUsed = 0,   anyFuelUsed = false;
+  let uploaded = 0,   anyUploaded = false;
+  legs.forEach((leg, i)=>{
+    if (leg.airborne && leg.landed){
+      flyingMins += diffMinutes(new Date(leg.airborne), new Date(leg.landed));
+      anyFlying = true;
+    }
+    if (typeof leg.groundMinutes === 'number'){
+      groundMins += leg.groundMinutes;
+      anyGround = true;
+    }
     const u = fuelUsedFor(leg.fuel);
-    return u !== null ? sum + u : sum;
-  }, 0);
-  const anyFuelData = legs.some(leg => fuelUsedFor(leg.fuel) !== null);
-  if (anyFuelData){
-    totalCard.style.display = 'block';
-    document.getElementById('totalFuelUsed').textContent = totalUsed.toFixed(1) + ' kg';
-  } else {
-    totalCard.style.display = 'none';
-  }
+    if (u !== null){ fuelUsed += u; anyFuelUsed = true; }
+    const up = uploadedBetween(legs[i-1], leg);
+    if (up !== null){ uploaded += up; anyUploaded = true; }
+  });
+
+  const rows = [
+    ['rowFlyingTime',   'totalFlyingTime',   anyFlying,   ()=> fmtDuration(flyingMins)],
+    ['rowGroundTime',   'totalGroundTime',   anyGround,   ()=> fmtDuration(groundMins)],
+    ['rowFuelUsed',     'totalFuelUsed',     anyFuelUsed, ()=> fuelUsed.toFixed(1) + ' kg'],
+    ['rowFuelUploaded', 'totalFuelUploaded', anyUploaded, ()=> uploaded.toFixed(1) + ' kg']
+  ];
+  rows.forEach(([rowId, valId, has, fmt])=>{
+    document.getElementById(rowId).style.display = has ? '' : 'none';
+    if (has) document.getElementById(valId).textContent = fmt();
+  });
+  totalCard.style.display = rows.some(r => r[2]) ? 'block' : 'none';
 }
 
 document.querySelectorAll('button.capture').forEach(btn=>{
@@ -1067,7 +1137,7 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
   resetLeg();
 });
 
-function legToText(leg){
+function legToText(leg, prevLeg){
   const lines = [];
   lines.push(`Reg: ${leg.reg || ''}`);
   if (leg.route) lines.push(`Route: ${leg.route}`);
@@ -1085,6 +1155,8 @@ function legToText(leg){
   const liftLandDur = (leg.airborne && leg.landed) ? fmtDuration(diffMinutes(new Date(leg.airborne), new Date(leg.landed))) : null;
   if (liftLandDur) lines.push(`Lift-Land: ${liftLandDur}`);
   if (typeof leg.groundMinutes === 'number') lines.push(`Ground since previous land: ${fmtDuration(leg.groundMinutes)}`);
+  const uploadedKg = uploadedBetween(prevLeg, leg);
+  if (uploadedKg !== null) lines.push(`Fuel uploaded since previous leg: ${uploadedKg.toFixed(1)}kg`);
   if (leg.fuel){
     const fuelParts = fuelPartsFor(leg.fuel);
     if (fuelParts.length) lines.push(`Fuel: ${fuelParts.join(', ')}`);
@@ -1100,7 +1172,7 @@ async function exportHistory(){
     showToast('No legs to export');
     return;
   }
-  const text = legs.map(legToText).join('\n\n' + '-'.repeat(30) + '\n\n');
+  const text = legs.map((leg, i)=> legToText(leg, legs[i-1])).join('\n\n' + '-'.repeat(30) + '\n\n');
   const filename = 'flight-legs-' + new Date().toISOString().slice(0,10) + '.txt';
   const blob = new Blob([text], { type: 'text/plain' });
 
