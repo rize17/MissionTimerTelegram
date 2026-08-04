@@ -101,21 +101,20 @@
     transition: border-color .15s ease, background .15s ease;
   }
   .step-main{
-    display:flex; align-items:center; justify-content:space-between; gap: 12px;
+    display:flex; align-items:center; justify-content:space-between; gap: 8px;
   }
   .step.done{
     border-color: var(--green-dim);
     background: linear-gradient(180deg, #12211b, #11191a);
   }
   .step-label{
-    display:flex; flex-direction:column; gap:3px;
+    display:flex; flex-direction:column; gap:3px; flex: 0 0 auto;
   }
   .step-label .name{
     font-size: 13px; letter-spacing:0.08em; text-transform:uppercase;
     color: var(--text-dim); font-weight:700;
   }
   .step.done .step-label .name{ color: var(--green); }
-  .step-label .hint{ font-size: 11px; color: #56616c; }
 
   .fuel-row{
     display:flex; align-items:center; justify-content:flex-end; gap:8px;
@@ -133,6 +132,12 @@
   }
   input.fuel-input:focus{ outline:none; border-color: var(--amber); }
   input.fuel-input::placeholder{ color: #4a5560; }
+  /* One-line step rows (name | fuel | time | Capture): the fuel box is the only
+     flexible item, so it soaks up whatever width the row has spare. */
+  .step-main input.fuel-input{
+    font-size: 14px; padding: 8px;
+    flex: 1 1 auto; width: auto; min-width: 56px; max-width: 84px;
+  }
   input.mission-time-inline{
     -webkit-appearance:none; appearance:none; background:transparent; border:none;
     font: inherit; color: inherit; padding:0; width:auto; color-scheme: dark;
@@ -140,7 +145,8 @@
   input.mission-time-inline:focus{ outline:none; }
 
   .time-display{
-    font-size: 26px; font-weight:600; color: #3a444d; min-width: 92px; text-align:right;
+    font-size: 22px; font-weight:600; color: #3a444d; min-width: 78px; text-align:right;
+    flex: 0 0 auto;
   }
   .step.done .time-display{ color: var(--text); }
   input.time-display{
@@ -154,9 +160,9 @@
     background: var(--panel-raised);
     border: 1px solid #33404a;
     color: var(--amber);
-    font-size: 13px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
-    padding: 14px 18px; border-radius: 12px;
-    min-width: 108px;
+    font-size: 12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+    padding: 14px 10px; border-radius: 12px;
+    min-width: 80px; flex: 0 0 auto;
     transition: transform .08s ease, background .12s ease;
   }
   button.capture:active{ transform: scale(0.96); background:#1e262e; }
@@ -275,17 +281,11 @@
   </div>
 
   <div class="step" id="step-off_blocks" data-key="off_blocks">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+    <div class="step-main">
       <div class="step-label">
         <div class="name">Start</div>
-        <div class="hint">Engine start</div>
       </div>
-      <div class="fuel-row" style="margin:0; padding:0; border:none;">
-        <label for="fuel-off_blocks">Fuel</label>
-        <input class="fuel-input mono" id="fuel-off_blocks" data-fuel="off_blocks" type="text" inputmode="decimal" placeholder="kg">
-      </div>
-    </div>
-    <div class="step-main" style="justify-content:flex-end;">
+      <input class="fuel-input mono" id="fuel-off_blocks" data-fuel="off_blocks" type="text" inputmode="decimal" placeholder="kg" aria-label="Start fuel">
       <input type="time" class="time-display mono" id="disp-off_blocks" data-key="off_blocks">
       <button class="capture" data-key="off_blocks">Capture</button>
     </div>
@@ -295,8 +295,8 @@
     <div class="step-main">
       <div class="step-label">
         <div class="name">Lift</div>
-        <div class="hint">Take-off</div>
       </div>
+      <input class="fuel-input mono" id="fuel-airborne" data-fuel="airborne" type="text" inputmode="decimal" placeholder="kg" aria-label="Lift fuel">
       <input type="time" class="time-display mono" id="disp-airborne" data-key="airborne">
       <button class="capture" data-key="airborne">Capture</button>
     </div>
@@ -340,25 +340,19 @@
     <div class="step-main">
       <div class="step-label">
         <div class="name">Land</div>
-        <div class="hint">Touchdown</div>
       </div>
+      <input class="fuel-input mono" id="fuel-landed" data-fuel="landed" type="text" inputmode="decimal" placeholder="kg" aria-label="Land fuel">
       <input type="time" class="time-display mono" id="disp-landed" data-key="landed">
       <button class="capture" data-key="landed">Capture</button>
     </div>
   </div>
 
   <div class="step" id="step-on_blocks" data-key="on_blocks">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+    <div class="step-main">
       <div class="step-label">
         <div class="name">End</div>
-        <div class="hint">Engine shutdown</div>
       </div>
-      <div class="fuel-row" style="margin:0; padding:0; border:none;">
-        <label for="fuel-on_blocks">Fuel</label>
-        <input class="fuel-input mono" id="fuel-on_blocks" data-fuel="on_blocks" type="text" inputmode="decimal" placeholder="kg">
-      </div>
-    </div>
-    <div class="step-main" style="justify-content:flex-end;">
+      <input class="fuel-input mono" id="fuel-on_blocks" data-fuel="on_blocks" type="text" inputmode="decimal" placeholder="kg" aria-label="End fuel">
       <input type="time" class="time-display mono" id="disp-on_blocks" data-key="on_blocks">
       <button class="capture" data-key="on_blocks">Capture</button>
     </div>
@@ -404,6 +398,21 @@ const STORAGE_KEY = 'flight-timer:legs';
 const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'End' };
+
+// Fuel readings, listed in the order they happen during a leg.
+const FUEL_ORDER = ['off_blocks','airborne','mission_start','mission_end','landed','on_blocks'];
+const FUEL_LABELS = {
+  off_blocks: 'Start', airborne: 'Lift',
+  mission_start: 'Mission Start', mission_end: 'Mission End',
+  landed: 'Land', on_blocks: 'End'
+};
+// Legs saved before Lift/Land fuel existed simply lack those keys, so they are skipped.
+function fuelPartsFor(f){
+  if (!f) return [];
+  return FUEL_ORDER
+    .filter(k => f[k] !== '' && f[k] !== undefined && f[k] !== null)
+    .map(k => `${FUEL_LABELS[k]}: ${f[k]}kg`);
+}
 
 async function sendTelegram(text){
   let url;
@@ -678,10 +687,7 @@ function renderHistory(legs){
       ? `<div class="row2"><span class="times mono">Mission ${fmtTime(new Date(leg.mission.start))} → ${fmtTime(new Date(leg.mission.end))}</span><span class="durations mono">${fmtDuration(leg.mission.totalMinutes)}</span></div>`
       : '';
     const legFuelUsed = fuelUsedFor(leg.fuel);
-    const fuelLabels = { off_blocks: 'Start', on_blocks: 'End', mission_start: 'Mission Start', mission_end: 'Mission End' };
-    const fuelParts = leg.fuel ? Object.entries(leg.fuel)
-      .filter(([k,v])=> v !== '' && v !== undefined && v !== null)
-      .map(([k,v])=> `${fuelLabels[k] || k}: ${v}kg`) : [];
+    const fuelParts = fuelPartsFor(leg.fuel);
     const fuelLine = fuelParts.length
       ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">${fuelParts.join(' · ')}</span>${legFuelUsed!==null ? `<span class="durations mono">Used ${legFuelUsed.toFixed(1)}kg</span>` : ''}</div>`
       : '';
@@ -825,11 +831,8 @@ function legToText(leg){
   if (bt) lines.push(`Start-Stop: ${bt}`);
   const liftLandDur = (leg.airborne && leg.landed) ? fmtDuration(diffMinutes(new Date(leg.airborne), new Date(leg.landed))) : null;
   if (liftLandDur) lines.push(`Lift-Land: ${liftLandDur}`);
-  const fuelLabels = { off_blocks: 'Start', on_blocks: 'End', mission_start: 'Mission Start', mission_end: 'Mission End' };
   if (leg.fuel){
-    const fuelParts = Object.entries(leg.fuel)
-      .filter(([k,v])=> v !== '' && v !== undefined && v !== null)
-      .map(([k,v])=> `${fuelLabels[k] || k}: ${v}kg`);
+    const fuelParts = fuelPartsFor(leg.fuel);
     if (fuelParts.length) lines.push(`Fuel: ${fuelParts.join(', ')}`);
     const used = fuelUsedFor(leg.fuel);
     if (used !== null) lines.push(`Fuel Used: ${used.toFixed(1)}kg`);
