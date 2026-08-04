@@ -492,7 +492,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v47';
+const APP_VERSION = 'v48';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -928,7 +928,7 @@ function renderHistory(legs){
       <div class="row1"><span>${leg.reg || ''}${leg.route ? ' · ' + leg.route : ''}</span><span>${dateStr}</span></div>
       ${leg.hoistCount ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">Hoists/Slings: ${leg.hoistCount}</span></div>` : ''}
       <div class="row2">
-        <span class="times mono">Start ${leg.off_blocks?fmtTime(new Date(leg.off_blocks)):'--:--'}</span>
+        ${leg.startCarried ? '' : `<span class="times mono">Start ${leg.off_blocks?fmtTime(new Date(leg.off_blocks)):'--:--'}</span>`}
         <span class="times mono">Lift ${leg.airborne?fmtTime(new Date(leg.airborne)):'--:--'}</span>
       </div>
       ${mission}
@@ -1047,6 +1047,10 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
     route: document.getElementById('routeInput').value,
     hoistCount: hoistCount,
     groundMinutes: groundMinutesFor(prevLeg, current.airborne || null),
+    // Not captured on this leg - the engine kept running from the previous
+    // one. Recorded so history/export can skip showing a Start time this leg
+    // never actually had, same as the live block hides it.
+    startCarried: document.getElementById('step-off_blocks').classList.contains('carried'),
     off_blocks: current.off_blocks ? current.off_blocks.toISOString() : null,
     airborne: current.airborne ? current.airborne.toISOString() : null,
     landed: current.landed ? current.landed.toISOString() : null,
@@ -1067,7 +1071,7 @@ function legToText(leg){
   if (leg.route) lines.push(`Route: ${leg.route}`);
   if (leg.hoistCount) lines.push(`Hoists/Slings: ${leg.hoistCount}`);
   lines.push(`Date: ${leg.savedAt ? new Date(leg.savedAt).toLocaleDateString('en-GB') : ''}`);
-  lines.push(`Start: ${leg.off_blocks ? fmtTime(new Date(leg.off_blocks)) : '--:--'}`);
+  if (!leg.startCarried) lines.push(`Start: ${leg.off_blocks ? fmtTime(new Date(leg.off_blocks)) : '--:--'}`);
   lines.push(`Lift: ${leg.airborne ? fmtTime(new Date(leg.airborne)) : '--:--'}`);
   if (leg.mission && leg.mission.periods > 0){
     lines.push(`Mission: ${fmtTime(new Date(leg.mission.start))} -> ${fmtTime(new Date(leg.mission.end))} (${fmtDuration(leg.mission.totalMinutes)})`);

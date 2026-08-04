@@ -42,6 +42,13 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   Start → Shutdown timer, ground time, and Fuel Used all keep working; only the
   on-screen block disappears. It reappears once a leg finally records a
   shutdown, giving the next leg its own fresh, visible Start.
+  This carries into the **saved record** too: each leg stores `startCarried`
+  (set from the `.carried` class at the moment of save), and both the history
+  card and the plain-text export skip the "Start" line entirely when it's
+  true - a leg where Start wasn't captured shouldn't claim one, on the same
+  explicit request as hiding the live block. Legs saved before this field
+  existed default to showing Start (`undefined` is falsy), which is the
+  closest reasonable guess for old data with no way to know which case it was.
   Consequence: Start-Stop time accrues to whichever leg finally records the
   shutdown, covering the whole continuous run. Legs without a shutdown show
   Start-Stop as "—", so nothing is double counted.
