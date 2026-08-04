@@ -119,6 +119,27 @@ hides when none apply.
   saved before this existed still get it. Also shown per-leg on the history
   card and in the export as "Fuel uploaded since previous leg".
 
+## Editing a saved leg
+Tapping a leg card asks via `askYesNo()`, then pulls that leg back into the
+fields with `loadLegForEdit(index)`. `editingIndex` holds its position in
+history; Save writes back to that slot instead of appending, so **order and the
+original `savedAt` are preserved** (an edited leg keeps its date rather than
+jumping to today). Reset Leg doubles as Cancel — the buttons relabel to
+"Update Leg" / "Cancel Edit" and the edited card is outlined amber (`.editing`).
+- `hasUnsavedLegData()` deliberately ignores a **carried** start, since that was
+  filled in automatically — otherwise every hot-load leg would falsely warn.
+- **Mission timer is preserved verbatim unless touched.** A saved leg only keeps
+  first start / last end / total, not the individual runs, so a multi-run leg
+  cannot be rebuilt. It is restored as one segment purely so the times are
+  visible, but `editingMission` is written back unchanged unless `missionTouched`
+  flips (set by `startTimer`/`endTimer`/`setMissionStart`/`setMissionEnd`).
+  Without this, re-saving an untouched multi-run leg would flatten it and
+  inflate its total to the whole span. Touching it *does* accept the flattening —
+  that's the agreed tradeoff.
+- Ground time on an edited leg is recomputed against `legs[editingIndex - 1]`,
+  not against whatever is last in history.
+- Clear all calls `setEditing(null)`, since indices are meaningless afterwards.
+
 ## Confirmation dialogs
 `window.confirm()` renders as OK/Cancel on iOS Safari with no way to relabel
 the buttons. Anywhere a Yes/No question is needed (e.g. "Also reset the leg in

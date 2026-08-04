@@ -301,7 +301,11 @@
   .leg-card{
     background: var(--panel); border:1px solid var(--line); border-radius: 12px;
     padding: 12px 14px; margin-bottom: 10px; font-size: 13px;
+    cursor: pointer; transition: border-color .12s ease, background .12s ease;
   }
+  .leg-card:active{ background: var(--panel-raised); }
+  /* The leg currently loaded into the fields above. */
+  .leg-card.editing{ border-color: var(--amber); background: linear-gradient(180deg, #221a0c, #171310); }
   .leg-card .row1{ display:flex; justify-content:space-between; color: var(--text-dim); margin-bottom:6px; }
   .leg-card .row2{ display:flex; justify-content:space-between; }
   .leg-card .times{ color: var(--text); }
@@ -504,7 +508,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v50';
+const APP_VERSION = 'v51';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -572,6 +576,7 @@ function timerTotalMs(t, now){
 function startTimer(name){
   const t = timers[name];
   if (t.running) return;
+  if (name === 'mission') missionTouched = true;
   t.running = true;
   t.currentStart = new Date();
   renderTimer(name);
@@ -585,6 +590,7 @@ function startTimer(name){
 function endTimer(name){
   const t = timers[name];
   if (!t.running) return;
+  if (name === 'mission') missionTouched = true;
   const end = new Date();
   t.segments.push({ start: t.currentStart, end: end });
   t.running = false;
@@ -601,6 +607,7 @@ function endTimer(name){
   }
 }
 function setMissionStart(newDate){
+  missionTouched = true;
   const t = timers.mission;
   if (t.running){
     t.currentStart = newDate;
@@ -614,6 +621,7 @@ function setMissionStart(newDate){
   tickTimers();
 }
 function setMissionEnd(newDate){
+  missionTouched = true;
   const t = timers.mission;
   if (t.running){
     t.segments.push({ start: t.currentStart, end: newDate });
@@ -861,7 +869,8 @@ function capture(key){
   sendTelegram(buildTelegramMessage(msg));
 }
 
-function resetLeg(){
+// Clears every field of the leg in progress. Does not touch history.
+function clearLegFields(){
   current = {};
   fuel = {};
   hoistCount = 0;
@@ -873,11 +882,95 @@ function resetLeg(){
   document.querySelectorAll('.fuel-input').forEach(input=> input.value = '');
   document.getElementById('routeInput').value = '';
   resetTimers();
+}
+
+function resetLeg(){
+  clearLegFields();
+  setEditing(null);
   applyCarryOver();
   updateSummary();
   updateLiftLandTimer();
   updateStartStopTimer();
   updateFocus();
+}
+
+// ---- Editing a saved leg ------------------------------------------------
+// editingIndex is the position in history of the leg being edited, or null for
+// a normal new leg. Save updates that slot in place instead of appending.
+let editingIndex = null;
+// A saved leg keeps only the first start, last end and the total for its
+// mission timer, not the individual runs, so a multi-run leg cannot be rebuilt
+// exactly. The original block is therefore kept verbatim unless the user
+// actually touches the mission timer during the edit.
+let editingMission = null;
+let missionTouched = false;
+
+function setEditing(index){
+  editingIndex = index;
+  missionTouched = false;
+  if (index === null) editingMission = null;
+  const editing = index !== null;
+  document.getElementById('saveBtn').textContent = editing ? 'Update Leg' : 'Save Leg';
+  document.getElementById('resetBtn').textContent = editing ? 'Cancel Edit' : 'Reset Leg';
+}
+
+// Is there anything in the leg in progress that the user actually entered? A
+// carried start doesn't count - it was filled in automatically.
+function hasUnsavedLegData(){
+  const carried = document.getElementById('step-off_blocks').classList.contains('carried');
+  if (current.airborne || current.landed || current.on_blocks) return true;
+  if (current.off_blocks && !carried) return true;
+  if (hoistCount > 0) return true;
+  if (timers.mission.running || timers.mission.segments.length) return true;
+  if (document.getElementById('routeInput').value.trim()) return true;
+  return Object.keys(fuel).some(k =>
+    !(k === 'off_blocks' && carried) && (fuel[k] || '').trim() !== ''
+  );
+}
+
+function loadLegForEdit(index){
+  const legs = loadHistory();
+  const leg = legs[index];
+  if (!leg) return;
+  clearLegFields();
+  setEditing(index);
+  editingMission = leg.mission || null;
+
+  keys.forEach(k=>{
+    if (!leg[k]) return;
+    current[k] = new Date(leg[k]);
+    document.getElementById('disp-'+k).value = toHHMM(current[k]);
+    document.getElementById('step-'+k).classList.add('done');
+  });
+  fuel = { ...(leg.fuel || {}) };
+  Object.keys(fuel).forEach(k=>{
+    const input = document.getElementById('fuel-'+k);
+    if (input) input.value = fuel[k];
+  });
+  hoistCount = leg.hoistCount || 0;
+  document.getElementById('hoistCount').textContent = hoistCount;
+  document.getElementById('routeInput').value = leg.route || '';
+  if (leg.reg) document.getElementById('regInput').value = leg.reg;
+
+  // Shown as a single run purely so the times are visible and editable; the
+  // saved block is what gets written back unless missionTouched flips.
+  if (leg.mission && leg.mission.periods > 0 && leg.mission.start && leg.mission.end){
+    timers.mission.segments = [{ start: new Date(leg.mission.start), end: new Date(leg.mission.end) }];
+    timers.mission.running = false;
+    timers.mission.currentStart = null;
+  }
+  renderTimer('mission');
+
+  // Take the carried flag from the leg itself rather than re-deriving it.
+  setStartCarried(!!leg.startCarried);
+
+  renderHistory(legs);
+  updateSummary();
+  updateLiftLandTimer();
+  updateStartStopTimer();
+  updateFocus();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  showToast('Editing leg ' + (index + 1));
 }
 
 // A leg that was never shut down means the engine is still running, so the next
@@ -899,11 +992,17 @@ function applyCarryOver(){
       document.getElementById('fuel-off_blocks').value = prevStartFuel;
     }
   }
+  setStartCarried(carry);
+}
+
+// Split out so edit mode can restore a saved leg's carried state directly,
+// rather than re-deriving it from whatever is currently last in history.
+function setStartCarried(on){
   const step = document.getElementById('step-off_blocks');
   const btn = step.querySelector('button.capture');
-  step.classList.toggle('carried', carry);
-  btn.disabled = carry;
-  btn.textContent = carry ? 'Carried' : 'Capture';
+  step.classList.toggle('carried', on);
+  btn.disabled = on;
+  btn.textContent = on ? 'Carried' : 'Capture';
 }
 
 // Time spent on the ground between the previous leg landing and this one lifting.
@@ -973,7 +1072,7 @@ function renderHistory(legs){
     const fuelLine = fuelParts.length
       ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">${fuelParts.join(' · ')}</span>${legFuelUsed!==null ? `<span class="durations mono">Used ${legFuelUsed.toFixed(1)}kg</span>` : ''}</div>`
       : '';
-    return `<div class="leg-card">
+    return `<div class="leg-card${editingIndex === i ? ' editing' : ''}" data-index="${i}">
       <div class="row1"><span>${leg.reg || ''}${leg.route ? ' · ' + leg.route : ''}</span><span>${dateStr}</span></div>
       ${leg.hoistCount ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">Hoists/Slings: ${leg.hoistCount}</span></div>` : ''}
       <div class="row2">
@@ -1113,8 +1212,11 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
     return;
   }
   const legs = loadHistory();
-  const prevLeg = legs[legs.length - 1];
-  legs.push({
+  const isEdit = editingIndex !== null && legs[editingIndex];
+  // When editing, ground time is measured against the leg before this one in
+  // history, not against whatever happens to be last.
+  const prevLeg = isEdit ? legs[editingIndex - 1] : legs[legs.length - 1];
+  const record = {
     reg: document.getElementById('regInput').value,
     route: document.getElementById('routeInput').value,
     hoistCount: hoistCount,
@@ -1127,13 +1229,18 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
     airborne: current.airborne ? current.airborne.toISOString() : null,
     landed: current.landed ? current.landed.toISOString() : null,
     on_blocks: current.on_blocks ? current.on_blocks.toISOString() : null,
-    mission: missionData,
+    // Keep the saved mission block verbatim unless the timer was actually
+    // touched - a multi-run leg can't be rebuilt from what a leg stores, so
+    // re-snapshotting an untouched one would flatten it and inflate the total.
+    mission: (isEdit && !missionTouched && editingMission) ? editingMission : missionData,
     fuel: { ...fuel },
-    savedAt: new Date().toISOString()
-  });
+    // An edited leg keeps its original date rather than jumping to today.
+    savedAt: isEdit ? (legs[editingIndex].savedAt || new Date().toISOString()) : new Date().toISOString()
+  };
+  if (isEdit) legs[editingIndex] = record; else legs.push(record);
   saveHistory(legs);
   renderHistory(legs);
-  showToast('Leg saved');
+  showToast(isEdit ? 'Leg updated' : 'Leg saved');
   resetLeg();
 });
 
@@ -1217,9 +1324,24 @@ function askYesNo(message){
   });
 }
 
+// Tap a saved leg to pull it back into the fields above and correct it.
+document.getElementById('historyList').addEventListener('click', async (e)=>{
+  const card = e.target.closest('.leg-card');
+  if (!card) return;
+  const index = Number(card.dataset.index);
+  if (!Number.isInteger(index)) return;
+  let message = 'Edit this leg?';
+  if (editingIndex === index) message = 'Reload this leg? Unsaved changes to it will be lost.';
+  else if (editingIndex !== null) message = 'Switch to this leg? Unsaved changes will be lost.';
+  else if (hasUnsavedLegData()) message = 'Edit this leg? The leg in progress will be discarded.';
+  if (await askYesNo(message)) loadLegForEdit(index);
+});
+
 document.getElementById('clearHistory').addEventListener('click', async ()=>{
   saveHistory([]);
   renderHistory([]);
+  // Indices are meaningless once history is gone.
+  setEditing(null);
   // History is what carry-over reads from, so a carried start would be left
   // pointing at a leg that no longer exists - ask before wiping the one in
   // progress rather than silently taking it along.
