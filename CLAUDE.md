@@ -6,6 +6,14 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
 ## Files in this repo
 - `index.html` — the entire app (HTML/CSS/JS, no build step, no framework)
 - `sw.js` — service worker for offline caching. **Bump `CACHE_NAME` every time index.html changes**, or iOS will keep serving a stale cached copy.
+  Three things make the bump actually take effect, all added in v37 — don't
+  undo them: `install` fetches with `{cache:'reload'}` (otherwise a new cache
+  gets filled with the *old* index.html from the HTTP cache), the page is
+  served **network-first** (icons stay cache-first), and `index.html` registers
+  with `updateViaCache:'none'` plus a `reg.update()` on `visibilitychange`
+  (a Home Screen app is resumed, not reloaded, so it otherwise never re-checks).
+  Expect **two relaunches** after a deploy: the first installs the new worker
+  while the old one is still serving the page, the second shows it.
   Bump `APP_VERSION` in `index.html` to the same number at the same time — it
   is shown next to the title in the header so the user can confirm which build
   the phone is actually running.
