@@ -43,6 +43,9 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   End): a value in Start hides the Lift box, a value in End hides the Land box.
   Only hidden while the partner box is *empty*, so a reading already taken is
   never hidden or lost. See `FUEL_PARTNER` / `updateFuelVisibility()`.
+  **Exception:** on a carried (hot-load) leg, Start fuel is copied from the
+  previous leg's shutdown-less handoff, not a fresh reading — so it never
+  hides the Lift box, which still needs its own number.
 - **Start collapses once captured** (`.step.collapsed`), roughly halving its
   height and hiding its Capture button. The time stays editable for corrections.
   Note this also hides the "Carried" button label on carry-over legs.
@@ -52,6 +55,12 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   Null when either time is missing or the result is negative. This is the same
   condition that triggers the carry-over start, so the two always appear
   together.
+
+## Confirmation dialogs
+`window.confirm()` renders as OK/Cancel on iOS Safari with no way to relabel
+the buttons. Anywhere a Yes/No question is needed (e.g. "Also reset the leg in
+progress?" on Clear all), use the in-app `askYesNo(message)` sheet instead —
+`await`s a boolean, styled to match the app rather than a system dialog.
 
 ## Hosting
 GitHub Pages, public repo (required for Pages on the free plan), deployed from `main` branch root. No backend, no build process — files are served as-is.
