@@ -71,8 +71,9 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   `updateStartStopTimer()` must be called wherever the leg or history changes;
   Clear all needs it explicitly when the leg is *not* also reset, since
   `resetLeg()` isn't called in that branch.
-  Start → Shutdown is positioned just above the Saved Legs history, not at the
-  top with Lift → Land - that placement was a deliberate, explicit request.
+  Start → Shutdown sits directly under the Shutdown step, above Reset/Save Leg
+  - not at the top with Lift → Land. That placement was a deliberate, explicit
+  request (moved there in two steps after an initial placement lower down).
 - **Ground time** (`groundMinutes` on a saved leg) is previous leg's Land →
   this leg's Lift, and is only recorded when the previous leg had **no
   shutdown** — if the engine stopped, the gap is time parked, not ground time.
