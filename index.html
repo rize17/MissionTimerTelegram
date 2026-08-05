@@ -508,7 +508,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v51';
+const APP_VERSION = 'v52';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -1076,17 +1076,17 @@ function renderHistory(legs){
       <div class="row1"><span>${leg.reg || ''}${leg.route ? ' · ' + leg.route : ''}</span><span>${dateStr}</span></div>
       ${leg.hoistCount ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">Hoists/Slings: ${leg.hoistCount}</span></div>` : ''}
       <div class="row2">
-        ${leg.startCarried ? '' : `<span class="times mono">Start ${leg.off_blocks?fmtTime(new Date(leg.off_blocks)):'--:--'}</span>`}
+        <span class="times mono">${leg.startCarried ? '' : `Start ${leg.off_blocks?fmtTime(new Date(leg.off_blocks)):'--:--'}`}</span>
         <span class="times mono">Lift ${leg.airborne?fmtTime(new Date(leg.airborne)):'--:--'}</span>
       </div>
       ${mission}
       <div class="row2">
+        <span class="times mono">${leg.on_blocks ? `Shutdown ${fmtTime(new Date(leg.on_blocks))}` : ''}</span>
         <span class="times mono">Land ${leg.landed?fmtTime(new Date(leg.landed)):'--:--'}</span>
-        ${leg.on_blocks ? `<span class="times mono">Shutdown ${fmtTime(new Date(leg.on_blocks))}</span>` : ''}
       </div>
       ${(bt || liftLandDur) ? `<div class="row2">
-        ${bt ? `<span class="durations mono">Start-Stop ${bt}</span>` : ''}
-        ${liftLandDur ? `<span class="durations mono">Lift-Land ${liftLandDur}</span>` : ''}
+        <span class="durations mono">${bt ? `Start-Shutdown ${bt}` : ''}</span>
+        <span class="durations mono">${liftLandDur ? `Lift-Land ${liftLandDur}` : ''}</span>
       </div>` : ''}
       ${typeof leg.groundMinutes === 'number' ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">Ground since previous land</span><span class="durations mono">${fmtDuration(leg.groundMinutes)}</span></div>` : ''}
       ${uploadedKg !== null ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">Fuel uploaded since previous leg</span><span class="durations mono">+${uploadedKg.toFixed(1)}kg</span></div>` : ''}
@@ -1258,7 +1258,7 @@ function legToText(leg, prevLeg){
   lines.push(`Land: ${leg.landed ? fmtTime(new Date(leg.landed)) : '--:--'}`);
   if (leg.on_blocks) lines.push(`Shutdown: ${fmtTime(new Date(leg.on_blocks))}`);
   const bt = (leg.off_blocks && leg.on_blocks) ? fmtDuration(diffMinutes(new Date(leg.off_blocks), new Date(leg.on_blocks))) : null;
-  if (bt) lines.push(`Start-Stop: ${bt}`);
+  if (bt) lines.push(`Start-Shutdown: ${bt}`);
   const liftLandDur = (leg.airborne && leg.landed) ? fmtDuration(diffMinutes(new Date(leg.airborne), new Date(leg.landed))) : null;
   if (liftLandDur) lines.push(`Lift-Land: ${liftLandDur}`);
   if (typeof leg.groundMinutes === 'number') lines.push(`Ground since previous land: ${fmtDuration(leg.groundMinutes)}`);
