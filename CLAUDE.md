@@ -84,12 +84,15 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   name, `STEP_LABELS`/`FUEL_LABELS`, history card, export). The Mission timer's
   own unrelated End button (ends the hoist/sling timer) keeps its own label —
   do not touch that one.
-- **Two cumulative top-of-page timers**, `startStopTimer` (Start → Shutdown,
-  i.e. blades turning) and `liftLandTimer` (Lift → Land), driven by
-  `totalMsBetween(startKey, endKey)`. Each sums every *saved* leg's completed
-  span plus the live in-progress segment, and keeps counting across legs until
-  Clear all empties history — at which point they naturally read zero again.
-  A continuous run's Start→Shutdown time is only ever counted once, on the leg
+- **Two top-of-page timers**, `startStopTimer` (Start → Shutdown, i.e. blades
+  turning) and `liftLandTimer` (Lift → Land), driven by
+  `totalMsBetween(startKey, endKey)`. Each sums the *current engine run's*
+  saved legs (`currentRunLegs()` - everything after the most recent leg that
+  recorded a Shutdown) plus the live in-progress segment. They reset to zero
+  both on Clear all and the instant a fresh, non-carried Start begins after a
+  Shutdown - **on-screen only**, an explicit, deliberate scope-down from the
+  Totals summary below, which stays cumulative across all history. A
+  continuous run's Start→Shutdown time is only ever counted once, on the leg
   that finally records the shutdown, since carried-over legs have no
   `on_blocks` of their own to sum. `updateLiftLandTimer()` /
   `updateStartStopTimer()` must be called wherever the leg or history changes;

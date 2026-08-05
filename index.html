@@ -512,7 +512,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v56';
+const APP_VERSION = 'v57';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -697,16 +697,29 @@ function fmtDuration(mins){
   return h + 'h ' + String(m).padStart(2,'0') + 'm';
 }
 
-// Total time between startKey and endKey across every saved leg, plus the leg
-// in progress if its startKey is captured but its endKey is not yet - so the
-// figure keeps running live rather than jumping only when a leg is saved.
-// Runs from history, so it naturally resets to zero when Clear all empties it,
-// and naturally excludes any leg whose endKey never happened (a carried-over
-// start, still open on a later leg) since that leg alone has no endKey either -
-// the whole span it belongs to is only ever counted once, on whichever leg
-// finally captures the end.
+// Legs belonging to the still-open engine run: everything saved after the
+// most recent leg that recorded a Shutdown. Once a leg shuts down, that
+// closes its run - a fresh Start afterwards begins a new one, so the
+// on-screen timers (unlike the Totals summary, which stays cumulative across
+// all history) should only reflect the current run.
+function currentRunLegs(legs){
+  let start = 0;
+  for (let i = legs.length - 1; i >= 0; i--){
+    if (legs[i].on_blocks){ start = i + 1; break; }
+  }
+  return legs.slice(start);
+}
+
+// Total time between startKey and endKey across the current engine run only,
+// plus the leg in progress if its startKey is captured but its endKey is not
+// yet - so the figure keeps running live rather than jumping only when a leg
+// is saved. Resets to zero both on Clear all and the instant a fresh,
+// non-carried Start begins after a Shutdown. Naturally excludes any leg whose
+// endKey never happened (a carried-over start, still open on a later leg)
+// since that leg alone has no endKey either - the whole span it belongs to is
+// only ever counted once, on whichever leg finally captures the end.
 function totalMsBetween(startKey, endKey){
-  const legs = loadHistory();
+  const legs = currentRunLegs(loadHistory());
   let ms = legs.reduce((sum, leg)=>{
     if (leg[startKey] && leg[endKey]) return sum + (new Date(leg[endKey]) - new Date(leg[startKey]));
     return sum;
