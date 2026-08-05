@@ -818,7 +818,7 @@ function bingoEnabled(){
 }
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v75';
+const APP_VERSION = 'v76';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -1001,6 +1001,15 @@ function renderTimer(name){
 // Whether the user has opened the Mission card. A running timer always forces
 // it open regardless, since you need to see it and reach End.
 let missionOpen = false;
+// Same for the Bingo sub-block nested inside it, except nothing ever forces
+// that one open - it is purely opt-in, and the collapsed header carries the
+// Time to Bingo so leaving it shut costs nothing.
+// These MUST be declared above the tickClock() call below: tickClock ->
+// updateBingo -> updateBingoCard reads them, and `let` bindings throw a
+// ReferenceError if touched before their declaration runs. Declaring them
+// down beside updateBingoCard killed the whole script on load (v75).
+let bingoOpen = false;
+let bingoSummaryText = '';
 
 function updateMissionCard(){
   const t = timers.mission;
@@ -1136,11 +1145,6 @@ function renderBingoSwitch(){
 function updateBingoVisibility(){
   document.getElementById('bingoBlock').style.display = bingoEnabled() ? '' : 'none';
 }
-// Whether the user has opened the Bingo sub-block inside the Mission card.
-// Unlike Mission, nothing ever forces it open - it is purely opt-in, and the
-// collapsed header carries the Time to Bingo so leaving it shut costs nothing.
-let bingoOpen = false;
-let bingoSummaryText = '';
 function updateBingoCard(){
   document.getElementById('bingoBlock').classList.toggle('collapsed', !bingoOpen);
   document.getElementById('bingoSummary').textContent = bingoOpen ? '' : bingoSummaryText;
