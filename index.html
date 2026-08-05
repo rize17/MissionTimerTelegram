@@ -512,7 +512,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v57';
+const APP_VERSION = 'v58';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -1285,9 +1285,12 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
   };
   if (isEdit) legs[editingIndex] = record; else legs.push(record);
   saveHistory(legs);
+  // Clear editingIndex before rendering, or the just-saved card would render
+  // with the amber "editing" outline still applied and nothing left to
+  // re-render afterwards to remove it.
+  resetLeg();
   renderHistory(legs);
   showToast(isEdit ? 'Leg updated' : 'Leg saved');
-  resetLeg();
 });
 
 function legToText(leg, prevLeg){
