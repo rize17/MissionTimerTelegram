@@ -338,6 +338,10 @@
     font-size:14px; font-weight:700; background: var(--panel); color: var(--text);
   }
   .confirm-sheet button.confirm-yes{ background: var(--amber); color:#241900; border-color: var(--amber); }
+  /* Three or more choices stack, so each keeps a full-width tap target and a
+     readable label rather than being squeezed into thirds at 375px. */
+  .confirm-sheet .row.stacked{ flex-direction: column; }
+  .confirm-sheet button.confirm-danger{ background: transparent; color: var(--red); border-color: #5a2626; }
 </style>
 </head>
 <body>
@@ -500,10 +504,7 @@
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-sheet">
     <p id="confirmMessage"></p>
-    <div class="row">
-      <button id="confirmNo">No</button>
-      <button class="confirm-yes" id="confirmYes">Yes</button>
-    </div>
+    <div class="row" id="confirmButtons"></div>
   </div>
 </div>
 <script>
@@ -512,7 +513,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v63';
+const APP_VERSION = 'v64';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -1418,39 +1419,91 @@ async function exportHistory(){
 
 document.getElementById('exportHistory').addEventListener('click', exportHistory);
 
-// window.confirm renders as OK/Cancel on iOS with no way to relabel it, so a
-// Yes/No question uses this small in-app sheet instead.
-function askYesNo(message){
+// window.confirm renders as OK/Cancel on iOS with no way to relabel it, so any
+// question uses this small in-app sheet instead. Buttons are built from the
+// list given, so the same sheet serves a Yes/No and a pick-an-action prompt.
+// Three or more stack vertically, the way an iOS action sheet does.
+function askChoice(message, buttons){
   return new Promise((resolve)=>{
     const overlay = document.getElementById('confirmOverlay');
+    const row = document.getElementById('confirmButtons');
     document.getElementById('confirmMessage').textContent = message;
+    row.innerHTML = '';
+    row.classList.toggle('stacked', buttons.length > 2);
+    buttons.forEach(spec=>{
+      const btn = document.createElement('button');
+      btn.textContent = spec.label;
+      if (spec.style) btn.className = spec.style;
+      btn.addEventListener('click', ()=>{
+        overlay.classList.remove('show');
+        row.innerHTML = '';
+        resolve(spec.value);
+      });
+      row.appendChild(btn);
+    });
     overlay.classList.add('show');
-    function done(answer){
-      overlay.classList.remove('show');
-      yesBtn.removeEventListener('click', onYes);
-      noBtn.removeEventListener('click', onNo);
-      resolve(answer);
-    }
-    const yesBtn = document.getElementById('confirmYes');
-    const noBtn = document.getElementById('confirmNo');
-    function onYes(){ done(true); }
-    function onNo(){ done(false); }
-    yesBtn.addEventListener('click', onYes);
-    noBtn.addEventListener('click', onNo);
   });
 }
 
-// Tap a saved leg to pull it back into the fields above and correct it.
+function askYesNo(message){
+  return askChoice(message, [
+    { label: 'No',  value: false },
+    { label: 'Yes', value: true, style: 'confirm-yes' }
+  ]);
+}
+
+// Tap a saved leg to edit or delete it.
 document.getElementById('historyList').addEventListener('click', async (e)=>{
   const card = e.target.closest('.leg-card');
   if (!card) return;
   const index = Number(card.dataset.index);
   if (!Number.isInteger(index)) return;
-  let message = 'Edit this leg?';
-  if (editingIndex === index) message = 'Reload this leg? Unsaved changes to it will be lost.';
-  else if (editingIndex !== null) message = 'Switch to this leg? Unsaved changes will be lost.';
-  else if (hasUnsavedLegData()) message = 'Edit this leg? The leg in progress will be discarded.';
-  if (await askYesNo(message)) loadLegForEdit(index);
+  const leg = loadHistory()[index];
+  if (!leg) return;
+
+  const title = [leg.reg, leg.route].filter(Boolean).join(' · ') || ('Leg ' + (index + 1));
+  const action = await askChoice(title, [
+    { label: 'Cancel',      value: 'cancel' },
+    { label: 'Delete Leg',  value: 'delete', style: 'confirm-danger' },
+    { label: 'Edit Leg',    value: 'edit',   style: 'confirm-yes' }
+  ]);
+
+  if (action === 'edit'){
+    let warning = null;
+    if (editingIndex === index) warning = 'Reload this leg? Unsaved changes to it will be lost.';
+    else if (editingIndex !== null) warning = 'Switch to this leg? Unsaved changes will be lost.';
+    else if (hasUnsavedLegData()) warning = 'The leg in progress will be discarded. Continue?';
+    if (warning && !(await askYesNo(warning))) return;
+    loadLegForEdit(index);
+    return;
+  }
+
+  if (action === 'delete'){
+    if (!(await askYesNo('Delete this leg? This cannot be undone.'))) return;
+    const legs = loadHistory();
+    legs.splice(index, 1);
+    saveHistory(legs);
+    if (editingIndex === index){
+      // The fields above belong to a leg that no longer exists - saving them
+      // would write into someone else's slot, so drop back to a fresh leg.
+      setEditing(null);
+      clearLegFields();
+      applyCarryOver();
+    } else if (editingIndex !== null && editingIndex > index){
+      editingIndex--;              // everything after the hole shifted down one
+    } else if (editingIndex === null && !hasUnsavedLegData()){
+      // Nothing of the user's own in the fields, so refresh a carried start
+      // that may no longer apply now the previous leg is gone.
+      clearLegFields();
+      applyCarryOver();
+    }
+    renderHistory(legs);
+    updateSummary();
+    updateLiftLandTimer();
+    updateStartStopTimer();
+    updateFocus();
+    showToast('Leg deleted');
+  }
 });
 
 document.getElementById('clearHistory').addEventListener('click', async ()=>{

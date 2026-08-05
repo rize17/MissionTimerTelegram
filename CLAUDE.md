@@ -170,9 +170,19 @@ hides when none apply.
   saved before this existed still get it. Also shown per-leg on the history
   card and in the export as "Fuel uploaded since previous leg".
 
-## Editing a saved leg
-Tapping a leg card asks via `askYesNo()`, then pulls that leg back into the
-fields with `loadLegForEdit(index)`. `editingIndex` holds its position in
+## Editing or deleting a saved leg
+Tapping a leg card opens an `askChoice()` sheet titled with the leg's reg/route
+offering **Cancel / Delete Leg / Edit Leg**. Swipe-to-reveal was considered and
+deliberately not used: touch gestures can't be verified from the dev
+environment, and a stray horizontal drag while scrolling the log is the usual
+failure. Delete always asks a second time — it cannot be undone. Deleting has
+two edit-state cases that must stay handled:
+- deleting **the leg being edited** cancels the edit and clears the fields,
+  since saving them would otherwise write into another leg's slot;
+- deleting a leg **before** the one being edited decrements `editingIndex`,
+  because every later leg shifts down one.
+
+Edit pulls that leg back into the fields with `loadLegForEdit(index)`. `editingIndex` holds its position in
 history; Save writes back to that slot instead of appending, so **order and the
 original `savedAt` are preserved** (an edited leg keeps its date rather than
 jumping to today). Reset Leg doubles as Cancel — the buttons relabel to
@@ -194,9 +204,12 @@ jumping to today). Reset Leg doubles as Cancel — the buttons relabel to
 
 ## Confirmation dialogs
 `window.confirm()` renders as OK/Cancel on iOS Safari with no way to relabel
-the buttons. Anywhere a Yes/No question is needed (e.g. "Also reset the leg in
-progress?" on Clear all), use the in-app `askYesNo(message)` sheet instead —
-`await`s a boolean, styled to match the app rather than a system dialog.
+the buttons, so all prompts use the in-app sheet instead.
+`askChoice(message, buttons)` builds its buttons from the list given and
+resolves to the chosen `value`; three or more stack vertically so each keeps a
+full-width tap target at 375px. `askYesNo(message)` is a thin wrapper over it
+returning a boolean. Styles: `confirm-yes` (amber primary), `confirm-danger`
+(red, destructive), or none for a plain/cancel button.
 
 ## Hosting
 GitHub Pages, public repo (required for Pages on the free plan), deployed from `main` branch root. No backend, no build process — files are served as-is.
