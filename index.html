@@ -512,7 +512,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v55';
+const APP_VERSION = 'v56';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -1115,8 +1115,8 @@ function renderHistory(legs){
         <span class="times mono">Land ${leg.landed?fmtTime(new Date(leg.landed)):'--:--'}</span>
       </div>
       ${(bt || liftLandDur) ? `<div class="row2">
-        <span class="durations mono">${bt ? `Start-Shutdown ${bt}` : ''}</span>
-        <span class="durations mono">${liftLandDur ? `Lift-Land ${liftLandDur}` : ''}</span>
+        <span class="durations mono">${bt ? `Total ${bt}` : ''}</span>
+        <span class="durations mono">${liftLandDur ? `Total ${liftLandDur}` : ''}</span>
       </div>` : ''}
       ${legGround !== null ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">Ground Time</span><span class="durations mono">${fmtDuration(legGround)}</span></div>` : ''}
       ${uploadedKg !== null ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">Fuel uploaded since previous leg</span><span class="durations mono">+${uploadedKg.toFixed(1)}kg</span></div>` : ''}
