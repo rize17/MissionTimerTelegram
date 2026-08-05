@@ -513,7 +513,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v64';
+const APP_VERSION = 'v65';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -889,12 +889,18 @@ function legStage(){
 // lost.
 const FUEL_PARTNER = { airborne: 'off_blocks', landed: 'on_blocks' };
 function updateFuelVisibility(){
-  // On a hot load Start fuel is carried from the previous leg's shutdown, not
-  // a reading taken now - Lift still needs its own, so don't hide it.
   const startIsCarried = document.getElementById('step-off_blocks').classList.contains('carried');
   Object.keys(FUEL_PARTNER).forEach(key=>{
-    if (key === 'airborne' && startIsCarried){
-      document.getElementById('fuel-airborne').style.display = '';
+    if (key === 'airborne'){
+      // You fuel at engine start, so a normal leg only ever needs the Start
+      // box - showing an empty Lift one beside it just invites a second
+      // reading for the same moment. The Lift box is only offered on a hot
+      // load, where the Start block is hidden because this leg never had an
+      // engine start of its own and its carried Start fuel is stale. A value
+      // already typed is never hidden, so nothing entered can be stranded.
+      const own = (fuel.airborne || '').trim();
+      document.getElementById('fuel-airborne').style.display =
+        (startIsCarried || own) ? '' : 'none';
       return;
     }
     const primary = (fuel[FUEL_PARTNER[key]] || '').trim();

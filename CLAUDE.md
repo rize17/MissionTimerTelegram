@@ -69,9 +69,12 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   End): a value in Start hides the Lift box, a value in End hides the Land box.
   Only hidden while the partner box is *empty*, so a reading already taken is
   never hidden or lost. See `FUEL_PARTNER` / `updateFuelVisibility()`.
-  **Exception:** on a carried (hot-load) leg, Start fuel is copied from the
-  previous leg's shutdown-less handoff, not a fresh reading — so it never
-  hides the Lift box, which still needs its own number.
+  **The Lift box is only offered on a hot load.** You fuel at engine start, so
+  a normal leg only ever needs the Start box — an empty Lift box beside it just
+  invites a second reading for the same moment. It appears only when the Start
+  block is hidden (a carried leg, which never had an engine start of its own
+  and whose carried Start fuel is stale), or when a Lift value is already
+  present, so nothing typed — or saved by an older version — is ever stranded.
   **The saved leg card and export show one reading per pair** via
   `fuelPartsFor(leg)` — Start *or* Lift, Land *or* Shutdown — since only one of
   each is ever really taken. Start wins over Lift and Shutdown over Land,
