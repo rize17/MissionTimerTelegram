@@ -403,6 +403,22 @@
     transition: transform .15s ease; display:block;
   }
   .switch[aria-checked="true"] .switch-knob{ transform: translateX(20px); }
+
+  /* Bingo Fuel inputs get their own class (not .fuel-input) so the blanket
+     ".fuel-input" clear in clearLegFields() doesn't wipe Speed/Burn back to
+     empty instead of their Settings defaults - styled identically though. */
+  input.bingo-input{
+    -webkit-appearance:none; appearance:none;
+    background: var(--panel-raised); border: 1px solid #33404a; color: var(--text);
+    font-size: 15px; font-weight:600; text-align:right;
+    padding: 8px 10px; border-radius: 8px; width: 84px;
+    font-family: 'SF Mono', 'Roboto Mono', ui-monospace, 'Courier New', monospace;
+  }
+  input.bingo-input:focus{ outline:none; border-color: var(--amber); }
+  input.bingo-input::placeholder{ color: #4a5560; }
+  .timer-card.bingo-overdue{ border-color:#8a2222; background: linear-gradient(180deg, #2a1414, #1a1010); }
+  .timer-card.bingo-overdue .timer-name,
+  .timer-card.bingo-overdue .timer-big{ color:#ff6b6b; }
 </style>
 </head>
 <body>
@@ -490,6 +506,38 @@
       <button class="btn-timer" id="end-mission" data-timer="mission" style="width:100px; padding:12px 0; font-size:14px;">End</button>
     </div>
     </div>
+  </div>
+
+  <!-- Hidden unless enabled in Settings. Distance always starts blank each
+       leg; Speed/Burn pre-fill from Settings but stay editable per leg,
+       rather than being hard-coded - see applyBingoDefaults(). -->
+  <div class="timer-card" id="bingoBlock" style="display:none;">
+    <div class="timer-top">
+      <div class="timer-name">Bingo Fuel</div>
+    </div>
+    <div class="fuel-row" style="margin:0; padding:0; border:none; justify-content:space-between;">
+      <label for="bingoDistance">Distance to base (nm)</label>
+      <input class="bingo-input mono" id="bingoDistance" type="text" inputmode="decimal" placeholder="nm">
+    </div>
+    <div class="fuel-row" style="justify-content:space-between;">
+      <label for="bingoSpeed">Speed (kt)</label>
+      <input class="bingo-input mono" id="bingoSpeed" type="text" inputmode="decimal" placeholder="kt">
+    </div>
+    <div class="fuel-row" style="justify-content:space-between;">
+      <label for="bingoBurn">Fuel burn (kg/hr)</label>
+      <input class="bingo-input mono" id="bingoBurn" type="text" inputmode="decimal" placeholder="kg/hr">
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px;">
+      <div>
+        <div class="hoist-label">Bingo Fuel</div>
+        <div class="timer-big mono" id="bingoFuelValue" style="font-size:24px; margin:0;">—</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="hoist-label">Time to Bingo</div>
+        <div class="timer-big mono" id="bingoTimeValue" style="font-size:24px; margin:0;">—</div>
+      </div>
+    </div>
+    <div class="timer-sub" id="bingoStatus" style="margin-top:8px;"></div>
   </div>
 
   <div class="step" id="step-landed" data-key="landed">
@@ -589,6 +637,28 @@
         <button class="btn-timer" id="tgTestBtn" style="flex:1; width:auto;">Send Test</button>
       </div>
     </div>
+
+    <div class="section-label">Bingo Fuel</div>
+    <div class="timer-card">
+      <div class="fuel-row" style="margin:0; padding:0; border:none; justify-content:space-between;">
+        <label for="bingoEnabled" style="text-transform:none; font-size:14px; color:var(--text);">Enable Bingo Fuel</label>
+        <button type="button" class="switch" id="bingoEnabled" role="switch" aria-checked="false">
+          <span class="switch-knob"></span>
+        </button>
+      </div>
+      <div class="fuel-row" style="margin-top:14px;">
+        <label for="bingoSpeedSetting">Avg speed (kt)</label>
+        <input class="bingo-input mono" id="bingoSpeedSetting" type="text" inputmode="decimal" placeholder="kt">
+      </div>
+      <div class="fuel-row">
+        <label for="bingoBurnSetting">Avg fuel burn (kg/hr)</label>
+        <input class="bingo-input mono" id="bingoBurnSetting" type="text" inputmode="decimal" placeholder="kg/hr">
+      </div>
+      <div class="fuel-row">
+        <label for="bingoReserveSetting">Final reserve (kg)</label>
+        <input class="bingo-input mono" id="bingoReserveSetting" type="text" inputmode="decimal" placeholder="kg">
+      </div>
+    </div>
   </div>
 </div>
 
@@ -615,9 +685,19 @@ const NOTIFY_KEY = 'flight-timer:notify_enabled';
 function notificationsEnabled(){
   try{ return localStorage.getItem(NOTIFY_KEY) !== 'off'; }catch(e){ return true; }
 }
+// Unlike Notifications, absent means OFF - this is a brand new feature with
+// no prior behavior to preserve, and the user may not want the extra block
+// on screen until they opt in.
+const BINGO_ENABLED_KEY = 'flight-timer:bingo_enabled';
+const BINGO_SPEED_KEY = 'flight-timer:bingo_speed';
+const BINGO_BURN_KEY = 'flight-timer:bingo_burn';
+const BINGO_RESERVE_KEY = 'flight-timer:bingo_reserve';
+function bingoEnabled(){
+  try{ return localStorage.getItem(BINGO_ENABLED_KEY) === 'on'; }catch(e){ return false; }
+}
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v71';
+const APP_VERSION = 'v72';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -911,6 +991,7 @@ function tickClock(){
   tickTimers();
   updateLiftLandTimer();
   updateStartStopTimer();
+  updateBingo();
 }
 setInterval(tickClock, 1000);
 tickClock();
@@ -926,6 +1007,69 @@ function updateSummary(){
 // normally whole kg, and the decimal only adds noise in that case.
 function fmtFuel(n){
   return Number(n.toFixed(1)).toString();
+}
+
+function renderBingoSwitch(){
+  document.getElementById('bingoEnabled').setAttribute('aria-checked', bingoEnabled() ? 'true' : 'false');
+}
+function updateBingoVisibility(){
+  document.getElementById('bingoBlock').style.display = bingoEnabled() ? '' : 'none';
+}
+// Speed/Burn pre-fill from Settings on a fresh leg but stay editable without
+// touching Settings, since the figures can differ day to day. Distance
+// always starts blank - it isn't a stable default the way Speed/Burn are.
+function applyBingoDefaults(){
+  try{
+    document.getElementById('bingoSpeed').value = localStorage.getItem(BINGO_SPEED_KEY) || '';
+    document.getElementById('bingoBurn').value = localStorage.getItem(BINGO_BURN_KEY) || '';
+  }catch(e){}
+  document.getElementById('bingoDistance').value = '';
+}
+// The fuel state at which you must leave station to land back at base with
+// Final Reserve still in the tank, and the live time left until estimated
+// current fuel reaches it. Current fuel is estimated from the Mission Start
+// reading minus (mission elapsed time * burn rate) rather than re-read live,
+// since you don't normally re-enter a fuel figure while still on station.
+function updateBingo(){
+  if (!bingoEnabled()) return;
+  const card = document.getElementById('bingoBlock');
+  const fuelVal = document.getElementById('bingoFuelValue');
+  const timeVal = document.getElementById('bingoTimeValue');
+  const status = document.getElementById('bingoStatus');
+  const distance = parseFloat(document.getElementById('bingoDistance').value);
+  const speed = parseFloat(document.getElementById('bingoSpeed').value);
+  const burn = parseFloat(document.getElementById('bingoBurn').value);
+  const reserve = parseFloat(localStorage.getItem(BINGO_RESERVE_KEY)) || 0;
+
+  if (isNaN(distance) || isNaN(speed) || speed <= 0 || isNaN(burn) || burn <= 0){
+    fuelVal.textContent = '—';
+    timeVal.textContent = '—';
+    status.textContent = 'Enter distance, speed and fuel burn';
+    card.classList.remove('bingo-overdue');
+    return;
+  }
+  const fuelHome = (distance / speed) * burn;
+  const bingoFuel = fuelHome + reserve;
+  fuelVal.textContent = fmtFuel(bingoFuel) + 'kg';
+
+  const startFuel = parseFloat(fuel.mission_start);
+  if (isNaN(startFuel)){
+    timeVal.textContent = '—';
+    status.textContent = 'Enter Mission fuel to start the countdown';
+    card.classList.remove('bingo-overdue');
+    return;
+  }
+  const elapsedHrs = timerTotalMs(timers.mission, new Date()) / 3600000;
+  const currentFuelEst = startFuel - elapsedHrs * burn;
+  status.textContent = 'Est. current fuel ' + fmtFuel(currentFuelEst) + 'kg';
+  const minsToBingo = ((currentFuelEst - bingoFuel) / burn) * 60;
+  if (minsToBingo <= 0){
+    timeVal.textContent = 'BINGO';
+    card.classList.add('bingo-overdue');
+  } else {
+    timeVal.textContent = fmtDuration(Math.round(minsToBingo));
+    card.classList.remove('bingo-overdue');
+  }
 }
 function legEndFuel(leg){
   const f = leg.fuel || {};
@@ -1113,6 +1257,8 @@ function clearLegFields(){
   missionOpen = false;
   shutdownOpen = false;
   resetTimers();
+  applyBingoDefaults();
+  updateBingo();
 }
 
 function resetLeg(){
@@ -1206,6 +1352,7 @@ function loadLegForEdit(index){
   updateLiftLandTimer();
   updateStartStopTimer();
   updateFocus();
+  updateBingo();
   window.scrollTo({ top: 0, behavior: 'smooth' });
   showToast('Editing leg ' + (index + 1));
 }
@@ -1724,9 +1871,15 @@ document.getElementById('regInput').addEventListener('change', (e)=>{
     if (reg) document.getElementById('regInput').value = reg;
     const workerUrl = localStorage.getItem(WORKER_URL_KEY);
     if (workerUrl) document.getElementById('workerUrl').value = workerUrl;
+    document.getElementById('bingoSpeedSetting').value = localStorage.getItem(BINGO_SPEED_KEY) || '';
+    document.getElementById('bingoBurnSetting').value = localStorage.getItem(BINGO_BURN_KEY) || '';
+    document.getElementById('bingoReserveSetting').value = localStorage.getItem(BINGO_RESERVE_KEY) || '';
   }catch(e){}
   renderRegDisplay();
   renderNotifySwitch();
+  renderBingoSwitch();
+  updateBingoVisibility();
+  applyBingoDefaults();
   const legs = loadHistory();
   renderHistory(legs);
   applyCarryOver();
@@ -1734,6 +1887,7 @@ document.getElementById('regInput').addEventListener('change', (e)=>{
   updateFocus();
   renderTimer('mission');
   tickTimers();
+  updateBingo();
 })();
 
 function setSettingsOpen(open){
@@ -1756,6 +1910,24 @@ document.getElementById('notifEnabled').addEventListener('click', ()=>{
   try{ localStorage.setItem(NOTIFY_KEY, turningOff ? 'off' : 'on'); }catch(e){}
   renderNotifySwitch();
   showToast(turningOff ? 'Notifications off' : 'Notifications on');
+});
+
+document.getElementById('bingoEnabled').addEventListener('click', ()=>{
+  const turningOn = !bingoEnabled();
+  try{ localStorage.setItem(BINGO_ENABLED_KEY, turningOn ? 'on' : 'off'); }catch(e){}
+  renderBingoSwitch();
+  updateBingoVisibility();
+  if (turningOn){ applyBingoDefaults(); updateBingo(); }
+  showToast(turningOn ? 'Bingo Fuel on' : 'Bingo Fuel off');
+});
+[['bingoSpeedSetting', BINGO_SPEED_KEY], ['bingoBurnSetting', BINGO_BURN_KEY], ['bingoReserveSetting', BINGO_RESERVE_KEY]].forEach(([id, key])=>{
+  document.getElementById(id).addEventListener('change', (e)=>{
+    try{ localStorage.setItem(key, e.target.value.trim()); }catch(err){}
+    showToast('Bingo settings saved');
+  });
+});
+['bingoDistance','bingoSpeed','bingoBurn'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', updateBingo);
 });
 
 // No Save button: the Relay URL commits when you finish editing it, the same

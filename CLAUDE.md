@@ -248,6 +248,39 @@ would be easy; losing the leg is the reason not to.
 - `.toast` needs its `z-index: 10001`, above the Settings overlay's 9998.
   Without it a toast fired from inside Settings fires *invisibly* behind the
   panel, which is exactly how the old Save button came to look broken.
+- **Bingo Fuel** (`BINGO_ENABLED_KEY`) — **absent means off**, the opposite of
+  Notifications: this is a brand new block with no prior behavior to preserve,
+  and the whole point of the toggle is to keep it off screen until opted in.
+  Settings holds Avg Speed / Avg Fuel Burn / Final Reserve.
+
+## Bingo Fuel block
+Shown on the main page under the Mission card, only when enabled in Settings
+(`#bingoBlock`, `updateBingoVisibility()`). Answers "when do I need to leave
+station to get back to base with reserve left" from three inputs — Distance
+to Base, Speed, Fuel Burn — plus the Mission Start fuel reading already
+captured on the Mission card.
+- **Speed and Fuel Burn pre-fill from Settings** on every fresh leg
+  (`applyBingoDefaults()`, called from `clearLegFields()`) but stay editable
+  per leg without touching Settings, since the figures can differ day to day.
+  **Distance to Base always starts blank** — unlike Speed/Burn there's no
+  stable default for it. None of the three are saved on the leg record; they
+  reset the same way whether the leg is fresh or being edited.
+- **Bingo Fuel** (static) = fuel needed to fly Distance/Speed at the given
+  burn rate, plus Final Reserve. Recalculates on every keystroke in Distance/
+  Speed/Burn (`input` listeners call `updateBingo()` directly, not just the
+  1s tick, since this is the field you're actively adjusting under time
+  pressure).
+- **Time to Bingo** (live) is derived, not re-read: current fuel is estimated
+  as Mission Start fuel minus (mission elapsed time × burn rate), using
+  `timerTotalMs(timers.mission, now)` for elapsed time — the same total the
+  Mission timer itself displays, including multiple start/stop runs. This
+  assumes a steady burn rate rather than a fresh fuel reading, since you don't
+  normally re-enter fuel while still on station. Ticks down every second via
+  `tickClock()`. Once it reaches zero, shows "BINGO" and the whole card turns
+  red (`.bingo-overdue`) instead of counting into negative time.
+- Needs `fuel.mission_start` to compute Time to Bingo — without it, shows a
+  prompt instead of a countdown. Bingo Fuel itself only needs Distance/Speed/
+  Burn and displays independently of whether Mission fuel has been entered.
 
 ## Confirmation dialogs
 `window.confirm()` renders as OK/Cancel on iOS Safari with no way to relabel
