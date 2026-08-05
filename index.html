@@ -139,20 +139,22 @@
      not running), same idea as Start/Shutdown but smaller chrome throughout
      rather than hiding a single button - Start/End and the hoist counter stay
      fully working, since the mission timer can still be started again. */
-  .timer-card.collapsed{ padding: 10px 14px; }
-  .timer-card.collapsed .timer-top{ margin-bottom: 2px; }
-  .timer-card.collapsed .timer-big{ font-size: 16px; margin: 0 0 4px; }
-  .timer-card.collapsed .hoist-btn{ width: 24px; height: 24px; font-size: 15px; }
-  .timer-card.collapsed .hoist-value{ font-size: 16px; min-width: 18px; }
-  .timer-card.collapsed .fuel-row{ margin-top: 6px; padding-top: 6px; }
-  .timer-card.collapsed .fuel-row input.fuel-input{ font-size: 13px; padding: 6px 8px; }
-  .timer-card.collapsed button.btn-timer{ padding: 8px 0 !important; font-size: 12px !important; }
-  /* The start/end time range is empty chrome until a segment exists, and the
-     End row (fuel + button) is meaningless before Start has been pressed -
-     both only earn their space once the mission timer is actually running,
-     at which point the card is no longer .collapsed and they reappear. */
-  .timer-card.collapsed .timer-sub{ display:none; }
-  .timer-card.collapsed .mission-end-row{ display:none; }
+  /* Mission collapses to a single tappable header row - the whole body goes,
+     not just a shrink. The header keeps a glanceable summary (elapsed time and
+     hoist count) so collapsing never hides what you'd want to read at a
+     distance. */
+  .mission-header{ cursor:pointer; align-items:center; margin-bottom:2px; }
+  .mission-head-right{ display:flex; align-items:center; gap:10px; }
+  .mission-summary{ font-size:13px; color: var(--text-dim); letter-spacing:0.02em; }
+  .timer-card.running .mission-summary{ color: var(--amber); }
+  .mission-chevron{
+    font-size:16px; line-height:1; color: var(--text-dim); display:inline-block;
+    transition: transform .15s ease;
+  }
+  .timer-card:not(.collapsed) .mission-chevron{ transform: rotate(90deg); }
+  .timer-card.collapsed{ padding: 12px 14px; }
+  .timer-card.collapsed .mission-header{ margin-bottom: 0; }
+  .timer-card.collapsed .mission-body{ display:none; }
   .step-label{
     display:flex; flex-direction:column; gap:3px; flex: 0 0 auto;
   }
@@ -389,21 +391,28 @@
   </div>
 
   <div class="timer-card" id="timer-mission">
-    <div class="timer-top" style="align-items:baseline; margin-bottom:2px;">
+    <div class="timer-top mission-header" id="missionHeader">
       <div class="timer-name">Mission</div>
-      <div class="hoist-label">Hoists/Slings</div>
+      <div class="mission-head-right">
+        <span class="mission-summary mono" id="missionSummary"></span>
+        <span class="mission-chevron" id="missionChevron" aria-hidden="true">›</span>
+      </div>
     </div>
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+    <div class="mission-body" id="missionBody">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
       <div>
         <div class="timer-sub" id="sub-mission">
           <input type="time" class="mission-time-inline mono" id="mission-start-time"> → <input type="time" class="mission-time-inline mono" id="mission-end-time">
         </div>
         <div class="timer-big mono" id="big-mission">00:00:00</div>
       </div>
-      <div class="hoist-counter">
-        <button type="button" class="hoist-btn" id="hoistMinus">−</button>
-        <span class="hoist-value mono" id="hoistCount">0</span>
-        <button type="button" class="hoist-btn" id="hoistPlus">+</button>
+      <div class="hoist-block">
+        <div class="hoist-label">Hoists/Slings</div>
+        <div class="hoist-counter">
+          <button type="button" class="hoist-btn" id="hoistMinus">−</button>
+          <span class="hoist-value mono" id="hoistCount">0</span>
+          <button type="button" class="hoist-btn" id="hoistPlus">+</button>
+        </div>
       </div>
     </div>
     <div class="fuel-row" style="justify-content:space-between;">
@@ -419,6 +428,7 @@
         <input class="fuel-input mono" id="fuel-mission_end" data-fuel="mission_end" type="text" inputmode="decimal" placeholder="kg">
       </div>
       <button class="btn-timer" id="end-mission" data-timer="mission" style="width:100px; padding:12px 0; font-size:14px;">End</button>
+    </div>
     </div>
   </div>
 
@@ -513,7 +523,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v66';
+const APP_VERSION = 'v67';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -615,7 +625,12 @@ function startTimer(name){
 function endTimer(name){
   const t = timers[name];
   if (!t.running) return;
-  if (name === 'mission') missionTouched = true;
+  if (name === 'mission'){
+    missionTouched = true;
+    // Stay open after ending, so the end fuel reading can still be entered -
+    // otherwise the card would snap shut the moment you stopped the timer.
+    missionOpen = true;
+  }
   const end = new Date();
   t.segments.push({ start: t.currentStart, end: end });
   t.running = false;
@@ -687,10 +702,27 @@ function renderTimer(name){
     sub.textContent = 'Not started';
   }
 }
+// Whether the user has opened the Mission card. A running timer always forces
+// it open regardless, since you need to see it and reach End.
+let missionOpen = false;
+
+function updateMissionCard(){
+  const t = timers.mission;
+  const expanded = missionOpen || t.running;
+  document.getElementById('timer-mission').classList.toggle('collapsed', !expanded);
+  // Collapsed, the header carries what you'd otherwise open the card to read.
+  const bits = [];
+  const ms = timerTotalMs(t, new Date());
+  if (t.running || ms > 0) bits.push(fmtHMS(ms));
+  if (hoistCount > 0) bits.push(hoistCount + ' H/S');
+  document.getElementById('missionSummary').textContent = expanded ? '' : bits.join('  ·  ');
+}
+
 function tickTimers(){
   const now = new Date();
   const t = timers.mission;
   document.getElementById('big-mission').textContent = fmtHMS(timerTotalMs(t, now));
+  updateMissionCard();
 }
 function resetTimers(){
   timers = {
@@ -925,11 +957,9 @@ function updateFocus(){
       // size and visible whenever its timer is actually running - it might be
       // started again later in the same leg.
       dim = timers.mission.running ? false : !reachable.includes(key);
-      // Collapse is deliberately its own condition, not tied to dim: sitting
-      // idle-but-reachable between Lift and Land (in flight, hoists not yet
-      // started) is exactly the "not using it right now" case that should
-      // shrink, even though it stays undimmed and legible while reachable.
-      el.classList.toggle('collapsed', !timers.mission.running);
+      // Collapsed/expanded is handled by updateMissionCard(), which respects
+      // the user's own tap as well as whether the timer is running.
+      updateMissionCard();
     } else {
       dim = !!current[key] || !reachable.includes(key);
     }
@@ -964,6 +994,7 @@ function clearLegFields(){
   });
   document.querySelectorAll('.fuel-input').forEach(input=> input.value = '');
   document.getElementById('routeInput').value = '';
+  missionOpen = false;
   resetTimers();
 }
 
@@ -1041,6 +1072,9 @@ function loadLegForEdit(index){
     timers.mission.segments = [{ start: new Date(leg.mission.start), end: new Date(leg.mission.end) }];
     timers.mission.running = false;
     timers.mission.currentStart = null;
+    // Open it, since a leg with mission times is one you may well be here to
+    // correct - and a collapsed card would hide them.
+    missionOpen = true;
   }
   renderTimer('mission');
 
@@ -1315,10 +1349,20 @@ document.getElementById('mission-end-time').addEventListener('change', (e)=>{
 document.getElementById('hoistMinus').addEventListener('click', ()=>{
   if (hoistCount > 0) hoistCount--;
   document.getElementById('hoistCount').textContent = hoistCount;
+  updateMissionCard();
 });
 document.getElementById('hoistPlus').addEventListener('click', ()=>{
   hoistCount++;
   document.getElementById('hoistCount').textContent = hoistCount;
+  updateMissionCard();
+});
+
+document.getElementById('missionHeader').addEventListener('click', ()=>{
+  // While the timer is running the card is forced open, so a tap that would
+  // "close" it has to clear the flag rather than set it, or the first tap
+  // after stopping would do nothing.
+  missionOpen = !(missionOpen || timers.mission.running);
+  updateMissionCard();
 });
 
 document.getElementById('resetBtn').addEventListener('click', resetLeg);

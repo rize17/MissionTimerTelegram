@@ -93,17 +93,23 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   halving their height and hiding the Capture button. The time (and Start's
   fuel) stays editable for corrections. Note this also hides the "Carried"
   button label on carry-over legs.
-- **Mission collapses whenever it is not actively running**, via
-  `.timer-card.collapsed` - deliberately **not** the same condition as its
-  `dim` state. Sitting idle-but-reachable between Lift and Land (in flight,
-  hoists not yet started) is exactly the "not using it right now" case that
-  should shrink, even though it stays undimmed and legible while reachable.
-  Collapsed, the End row (`.mission-end-row`) and the start/end time range
-  (`.timer-sub`) are hidden entirely - both are meaningless before Start has
-  been pressed - but the Start button and hoist +/- counter stay visible and
-  fully working, since starting the mission timer or logging a hoist/sling are
-  exactly the actions you'd want to take from the collapsed state. Expands
-  automatically the instant the mission timer starts running.
+- **Mission collapses to a single tappable header row** (43px, vs 262px open) —
+  the whole `.mission-body` is hidden, not shrunk. Tap `#missionHeader` to
+  toggle. Driven by `updateMissionCard()`:
+  `expanded = missionOpen || timers.mission.running`.
+  - A **running timer forces it open** and a tap can't close it — you must be
+    able to see the timer and reach End. The toggle is written as
+    `missionOpen = !(missionOpen || running)` so the first tap after stopping
+    closes it rather than doing nothing.
+  - **Ending a mission sets `missionOpen = true`**, so the card stays open long
+    enough to enter the end fuel reading instead of snapping shut.
+  - `loadLegForEdit()` opens it when the leg has mission times, since a
+    collapsed card would hide the very values being corrected.
+  - Collapsed, the header shows a summary (`elapsed · N H/S`) so nothing
+    glanceable is lost. `clearLegFields()` resets `missionOpen` to false.
+  - Cost of this: starting a mission or logging a hoist from cold is now two
+    taps (open, then act) rather than one. Accepted deliberately — the card is
+    idle for most of a leg and was the largest thing on screen.
 - **"End" is called "Shutdown"** everywhere it denotes engine shutdown (step
   name, `STEP_LABELS`/`FUEL_LABELS`, history card, export). The Mission timer's
   own unrelated End button (ends the hoist/sling timer) keeps its own label —
