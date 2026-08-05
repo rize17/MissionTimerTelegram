@@ -251,27 +251,35 @@ would be easy; losing the leg is the reason not to.
 - **Bingo Fuel** (`BINGO_ENABLED_KEY`) — **absent means off**, the opposite of
   Notifications: this is a brand new block with no prior behavior to preserve,
   and the whole point of the toggle is to keep it off screen until opted in.
-  Settings holds Avg Speed / Avg Fuel Burn / Final Reserve.
+  Settings holds Avg Speed / Cruise Fuel Burn / Mission Fuel Burn / Final
+  Reserve.
 
 ## Bingo Fuel block
 Shown on the main page under the Mission card, only when enabled in Settings
 (`#bingoBlock`, `updateBingoVisibility()`). Answers "when do I need to leave
-station to get back to base with reserve left" from three inputs — Distance
-to Base, Speed, Fuel Burn — plus the Mission Start fuel reading already
-captured on the Mission card.
-- **Speed and Fuel Burn pre-fill from Settings** on every fresh leg
+station to get back to base with reserve left" from four inputs — Distance
+to Base, Speed, Cruise Burn, Mission Burn — plus the Mission Start fuel
+reading already captured on the Mission card.
+- **Two separate burn rates, not one.** Hover/on-station burn is well above
+  cruise, so a single figure would be wrong in whichever direction it wasn't
+  set for. **Cruise Burn** feeds the fuel needed to actually fly home
+  (`fuelHome = distance/speed * cruiseBurn`); **Mission Burn** feeds how fast
+  fuel is dropping right now while still on station (used for both the
+  current-fuel estimate and the countdown itself, since that's the rate you're
+  burning at until you leave).
+- **Speed and both burns pre-fill from Settings** on every fresh leg
   (`applyBingoDefaults()`, called from `clearLegFields()`) but stay editable
   per leg without touching Settings, since the figures can differ day to day.
-  **Distance to Base always starts blank** — unlike Speed/Burn there's no
-  stable default for it. None of the three are saved on the leg record; they
+  **Distance to Base always starts blank** — unlike the others there's no
+  stable default for it. None of the four are saved on the leg record; they
   reset the same way whether the leg is fresh or being edited.
-- **Bingo Fuel** (static) = fuel needed to fly Distance/Speed at the given
-  burn rate, plus Final Reserve. Recalculates on every keystroke in Distance/
-  Speed/Burn (`input` listeners call `updateBingo()` directly, not just the
-  1s tick, since this is the field you're actively adjusting under time
+- **Bingo Fuel** (static) = fuel needed to fly Distance/Speed at Cruise Burn,
+  plus Final Reserve. Recalculates on every keystroke in Distance/Speed/
+  either burn (`input` listeners call `updateBingo()` directly, not just the
+  1s tick, since these are fields you're actively adjusting under time
   pressure).
 - **Time to Bingo** (live) is derived, not re-read: current fuel is estimated
-  as Mission Start fuel minus (mission elapsed time × burn rate), using
+  as Mission Start fuel minus (mission elapsed time × Mission Burn), using
   `timerTotalMs(timers.mission, now)` for elapsed time — the same total the
   Mission timer itself displays, including multiple start/stop runs. This
   assumes a steady burn rate rather than a fresh fuel reading, since you don't
@@ -280,7 +288,8 @@ captured on the Mission card.
   red (`.bingo-overdue`) instead of counting into negative time.
 - Needs `fuel.mission_start` to compute Time to Bingo — without it, shows a
   prompt instead of a countdown. Bingo Fuel itself only needs Distance/Speed/
-  Burn and displays independently of whether Mission fuel has been entered.
+  Cruise Burn and displays independently of whether Mission fuel has been
+  entered.
 
 ## Confirmation dialogs
 `window.confirm()` renders as OK/Cancel on iOS Safari with no way to relabel
