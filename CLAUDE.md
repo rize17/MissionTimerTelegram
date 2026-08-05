@@ -138,7 +138,18 @@ hides when none apply.
 - **Total Ground Time** — sum of the per-leg `legGroundMinutes`, so it
   inherits that function's rules and matches the leg cards. By construction,
   Total Flying Time + Total Ground Time == Total Blades Turning.
-- **Total Fuel Used** — sum of `fuelUsedFor` (Start − Shutdown) per leg.
+- **Total Fuel Used** — sum of `periodFuelUsedFor(legs, i)` per closing leg
+  (one contribution per completed engine run, same "only counted once, on the
+  leg that finally records the Shutdown" rule as Blades Turning). Start fuel
+  is `legStartFuel()` on the leg that actually began the run, walking back
+  through the carried chain the same way `blockStartFor()` does for time so a
+  fuel edit anywhere upstream is picked up immediately. End fuel prefers the
+  closing leg's own Shutdown reading, falling back to its Land reading if
+  that's what got captured instead. Any fuel uploaded partway through the run
+  (`uploadedBetween` summed leg-to-leg across the run) is added back in — a
+  plain start-minus-end would otherwise net a refuel against consumption and
+  understate what was actually burned. Shown per-leg (on the closing leg,
+  where the other totals below also land) and in the export as "Fuel Used".
 - **Total Fuel Uploaded** — refuelling inferred between legs: more fuel on
   board at the start of a leg than at the end of the previous one.
   `legEndFuel()` is Land, falling back to Shutdown; `legStartFuel()` is Start,

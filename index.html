@@ -512,7 +512,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v59';
+const APP_VERSION = 'v60';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -771,17 +771,6 @@ function updateSummary(){
   // Block Time / Fuel Used / Mission Fuel Used summary card removed.
 }
 
-function fuelUsedBetween(f, startKey, endKey){
-  if (!f) return null;
-  const start = parseFloat(f[startKey]);
-  const end = parseFloat(f[endKey]);
-  if (isNaN(start) || isNaN(end)) return null;
-  return start - end;
-}
-function fuelUsedFor(f){
-  return fuelUsedBetween(f, 'off_blocks', 'on_blocks');
-}
-
 // Fuel on board at the end of a leg. Land is the reading meant for this, but
 // the pairing rule hides that box when a Shutdown reading was taken instead,
 // so fall back to it.
@@ -814,6 +803,35 @@ function uploadedBetween(prevLeg, leg){
   if (before === null || after === null) return null;
   const diff = after - before;
   return diff > 0 ? diff : null;
+}
+
+// Fuel actually burned across a whole continuous engine run (period), ending
+// at leg i - only meaningful once that leg has recorded a Shutdown, same
+// "only counted once, on the closing leg" rule as Blades Turning. Start fuel
+// comes from legStartFuel() on the leg that actually began the run, walking
+// back through the carried chain the same way blockStartFor() does for time.
+// End fuel prefers this leg's own Shutdown reading, falling back to its Land
+// reading if that is what got captured instead. Any fuel uploaded partway
+// through the run is added back in - a plain start-minus-end would otherwise
+// net a refuel against consumption and understate what was actually burned.
+function periodFuelUsedFor(legs, i){
+  const leg = legs[i];
+  if (!leg.on_blocks) return null;
+  let j = i;
+  while (j > 0 && legs[j].startCarried) j--;
+  const startFuel = legStartFuel(legs[j]);
+  const shutdownFuel = parseFloat((leg.fuel || {}).on_blocks);
+  const endFuel = !isNaN(shutdownFuel) ? shutdownFuel : (()=>{
+    const land = parseFloat((leg.fuel || {}).landed);
+    return isNaN(land) ? null : land;
+  })();
+  if (startFuel === null || endFuel === null) return null;
+  let added = 0;
+  for (let k = j + 1; k <= i; k++){
+    const up = uploadedBetween(legs[k-1], legs[k]);
+    if (up !== null) added += up;
+  }
+  return (startFuel - endFuel) + added;
 }
 
 // Only one part of a leg is live at a time. Everything else fades back, whether
@@ -1129,7 +1147,7 @@ function renderHistory(legs){
     const mission = leg.mission && leg.mission.periods > 0
       ? `<div class="row2"><span class="times mono">Mission ${fmtTime(new Date(leg.mission.start))} → ${fmtTime(new Date(leg.mission.end))}</span><span class="durations mono">${fmtDuration(leg.mission.totalMinutes)}</span></div>`
       : '';
-    const legFuelUsed = fuelUsedFor(leg.fuel);
+    const legFuelUsed = periodFuelUsedFor(legs, i);
     const fuelParts = fuelPartsFor(leg.fuel);
     const fuelLine = fuelParts.length
       ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">${fuelParts.join(' · ')}</span>${legFuelUsed!==null ? `<span class="durations mono">Used ${legFuelUsed.toFixed(1)}kg</span>` : ''}</div>`
@@ -1179,7 +1197,7 @@ function renderHistory(legs){
       groundMins += g;
       anyGround = true;
     }
-    const u = fuelUsedFor(leg.fuel);
+    const u = periodFuelUsedFor(legs, i);
     if (u !== null){ fuelUsed += u; anyFuelUsed = true; }
     const up = uploadedBetween(legs[i-1], leg);
     if (up !== null){ uploaded += up; anyUploaded = true; }
@@ -1340,7 +1358,7 @@ function legToText(legs, i){
   if (leg.fuel){
     const fuelParts = fuelPartsFor(leg.fuel);
     if (fuelParts.length) lines.push(`Fuel: ${fuelParts.join(', ')}`);
-    const used = fuelUsedFor(leg.fuel);
+    const used = periodFuelUsedFor(legs, i);
     if (used !== null) lines.push(`Fuel Used: ${used.toFixed(1)}kg`);
   }
   return lines.join('\n');
