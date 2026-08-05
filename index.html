@@ -512,7 +512,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v62';
+const APP_VERSION = 'v63';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -524,11 +524,31 @@ const FUEL_LABELS = {
   mission_start: 'Mission Start', mission_end: 'Mission End',
   landed: 'Land', on_blocks: 'Shutdown'
 };
-// Legs saved before Lift/Land fuel existed simply lack those keys, so they are skipped.
-function fuelPartsFor(f){
-  if (!f) return [];
+// One reading per pair is all that is ever really taken: you fuel at Start OR,
+// on a hot load where there was no fresh engine start, at Lift; and you read
+// again at Shutdown OR, if the engine kept running, at Land. Show only the one
+// that applies, so a leg never lists two figures for the same moment.
+//
+// Start wins over Lift, and Shutdown over Land, matching which box the live
+// app treats as primary (a value there hides its partner). The exception is a
+// carried leg: its Start fuel was copied from the previous leg's engine start
+// and was never taken on this flight, so Lift wins there - the same reason the
+// carried Start *time* is hidden. Mission readings aren't part of either pair
+// and always show if present.
+//
+// Display only - every reading stays in storage, and the fuel used / uploaded
+// calculations still read the raw values.
+function fuelPartsFor(leg){
+  const f = (leg && leg.fuel) || {};
+  const has = k => f[k] !== '' && f[k] !== undefined && f[k] !== null;
+  const startKey = (!leg.startCarried && has('off_blocks')) ? 'off_blocks'
+                 : has('airborne') ? 'airborne'
+                 : has('off_blocks') ? 'off_blocks' : null;
+  const endKey = has('on_blocks') ? 'on_blocks'
+               : has('landed') ? 'landed' : null;
+  const show = [startKey, 'mission_start', 'mission_end', endKey];
   return FUEL_ORDER
-    .filter(k => f[k] !== '' && f[k] !== undefined && f[k] !== null)
+    .filter(k => show.includes(k) && has(k))
     .map(k => `${FUEL_LABELS[k]}: ${f[k]}kg`);
 }
 
@@ -1153,7 +1173,7 @@ function renderHistory(legs){
       ? `<div class="row2"><span class="times mono">Mission ${fmtTime(new Date(leg.mission.start))} → ${fmtTime(new Date(leg.mission.end))}</span><span class="durations mono">${fmtDuration(leg.mission.totalMinutes)}</span></div>`
       : '';
     const legFuelUsed = periodFuelUsedFor(legs, i);
-    const fuelParts = fuelPartsFor(leg.fuel);
+    const fuelParts = fuelPartsFor(leg);
     const fuelLine = fuelParts.length
       ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">${fuelParts.join(' · ')}</span>${legFuelUsed!==null ? `<span class="durations mono">Used ${fmtFuel(legFuelUsed)}kg</span>` : ''}</div>`
       : '';
@@ -1361,7 +1381,7 @@ function legToText(legs, i){
   const uploadedKg = uploadedBetween(prevLeg, leg);
   if (uploadedKg !== null) lines.push(`Fuel uploaded since previous leg: ${fmtFuel(uploadedKg)}kg`);
   if (leg.fuel){
-    const fuelParts = fuelPartsFor(leg.fuel);
+    const fuelParts = fuelPartsFor(leg);
     if (fuelParts.length) lines.push(`Fuel: ${fuelParts.join(', ')}`);
     const used = periodFuelUsedFor(legs, i);
     if (used !== null) lines.push(`Fuel Used: ${fmtFuel(used)}kg`);

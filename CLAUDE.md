@@ -72,6 +72,15 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   **Exception:** on a carried (hot-load) leg, Start fuel is copied from the
   previous leg's shutdown-less handoff, not a fresh reading — so it never
   hides the Lift box, which still needs its own number.
+  **The saved leg card and export show one reading per pair** via
+  `fuelPartsFor(leg)` — Start *or* Lift, Land *or* Shutdown — since only one of
+  each is ever really taken. Start wins over Lift and Shutdown over Land,
+  matching which box the live app treats as primary, **except on a carried
+  leg**, where the Start figure is the stale copied one and Lift wins instead
+  (same reasoning as hiding the carried Start *time*). Mission readings aren't
+  part of either pair and always show. This is **display only** — every reading
+  stays in storage and `periodFuelUsedFor` / `uploadedBetween` still read the
+  raw values, so hiding a figure never changes a total.
 - **Captured times snap to the minute** (`capture()` zeroes seconds/ms) so a
   button-press timestamp always matches what the HH:MM display shows — the
   same as a manual time-picker edit already did. Without this, a duration
