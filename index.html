@@ -164,6 +164,36 @@
   .timer-card.collapsed{ padding: 12px 14px; }
   .timer-card.collapsed .mission-header{ margin-bottom: 0; }
   .timer-card.collapsed .mission-body{ display:none; }
+
+  /* Bingo Fuel nested inside the Mission body, collapsible in its own right -
+     it only matters while on station, and even then only when fuel is getting
+     tight, so it costs one line until tapped. Indented and boxed so it reads
+     as part of Mission rather than as a second card. */
+  .bingo-sub{
+    margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--panel-raised);
+  }
+  .bingo-header{
+    display:flex; align-items:center; justify-content:space-between; cursor:pointer;
+  }
+  .bingo-title{
+    font-size: 11px; letter-spacing:0.08em; text-transform:uppercase;
+    color: var(--text-dim); font-weight:700;
+  }
+  .bingo-head-right{ display:flex; align-items:center; gap:8px; }
+  .bingo-summary{ font-size:13px; color: var(--text-dim); letter-spacing:0.02em; }
+  .bingo-chevron{
+    font-size:15px; line-height:1; color: var(--text-dim); display:inline-block;
+    transition: transform .15s ease;
+  }
+  .bingo-sub:not(.collapsed) .bingo-chevron{ transform: rotate(90deg); }
+  .bingo-sub.collapsed .bingo-body{ display:none; }
+  /* Past bingo: has to read from the collapsed header too, since that's the
+     state it will usually be sitting in when it trips. */
+  .bingo-sub.bingo-overdue{ border-color:#8a2222; background: linear-gradient(180deg, #2a1414, #1a1010); }
+  .bingo-sub.bingo-overdue .bingo-title,
+  .bingo-sub.bingo-overdue .bingo-summary,
+  .bingo-sub.bingo-overdue .timer-big{ color:#ff6b6b; }
   .step-label{
     display:flex; flex-direction:column; gap:3px; flex: 0 0 auto;
   }
@@ -368,6 +398,10 @@
     cursor:pointer;
   }
   .gear-btn:active{ color: var(--amber); }
+  /* Sits on the far side of the reg from the gear - the two were close enough
+     together to be hard to hit individually. Its own padding keeps a real tap
+     target without crowding the reg text. */
+  #calcBtn{ font-size: 22px; padding: 2px 8px 2px 0; }
 
   .settings-overlay{
     position:fixed; inset:0; background: var(--bg); z-index: 9998;
@@ -422,7 +456,17 @@
   /* Calculator result that fails its check - below final reserve, or simply
      not enough fuel to make the distance at all. */
   .summary-row .value.calc-warn{ color:#ff6b6b; }
-  #calcStatus.calc-warn{ color:#ff6b6b; }
+  /* The reserve verdict is the line you actually act on, so it reads at the
+     same weight as the figures above it rather than as fine print. Drops back
+     to a dim hint (.calc-hint) while it's only prompting for missing inputs. */
+  .calc-status{
+    font-size: 16px; font-weight:700; color: var(--amber);
+    text-align:right; margin: 12px 2px 0;
+  }
+  .calc-status.calc-warn{ color:#ff6b6b; }
+  .calc-status.calc-hint{
+    font-size: 12px; font-weight:400; color: #56616c;
+  }
 </style>
 </head>
 <body>
@@ -433,8 +477,8 @@
       <span class="app-version mono" id="appVersion"></span>
     </div>
     <div class="header-right">
-      <span class="reg-display mono" id="regDisplay"></span>
       <button type="button" class="gear-btn" id="calcBtn" aria-label="Flight calculator">÷</button>
+      <span class="reg-display mono" id="regDisplay"></span>
       <button type="button" class="gear-btn" id="settingsBtn" aria-label="Settings">⚙</button>
     </div>
   </header>
@@ -510,43 +554,51 @@
       </div>
       <button class="btn-timer" id="end-mission" data-timer="mission" style="width:100px; padding:12px 0; font-size:14px;">End</button>
     </div>
-    </div>
-  </div>
 
-  <!-- Hidden unless enabled in Settings. Distance always starts blank each
-       leg; Speed/Burn pre-fill from Settings but stay editable per leg,
-       rather than being hard-coded - see applyBingoDefaults(). -->
-  <div class="timer-card" id="bingoBlock" style="display:none;">
-    <div class="timer-top">
-      <div class="timer-name">Bingo Fuel</div>
-    </div>
-    <div class="fuel-row" style="margin:0; padding:0; border:none; justify-content:space-between;">
-      <label for="bingoDistance">Distance to base (nm)</label>
-      <input class="bingo-input mono" id="bingoDistance" type="text" inputmode="decimal" placeholder="nm">
-    </div>
-    <div class="fuel-row" style="justify-content:space-between;">
-      <label for="bingoSpeed">Speed (kt)</label>
-      <input class="bingo-input mono" id="bingoSpeed" type="text" inputmode="decimal" placeholder="kt">
-    </div>
-    <div class="fuel-row" style="justify-content:space-between;">
-      <label for="bingoCruiseBurn">Cruise burn (kg/hr)</label>
-      <input class="bingo-input mono" id="bingoCruiseBurn" type="text" inputmode="decimal" placeholder="kg/hr">
-    </div>
-    <div class="fuel-row" style="justify-content:space-between;">
-      <label for="bingoMissionBurn">Mission burn (kg/hr)</label>
-      <input class="bingo-input mono" id="bingoMissionBurn" type="text" inputmode="decimal" placeholder="kg/hr">
-    </div>
-    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px;">
-      <div>
-        <div class="hoist-label">Bingo Fuel</div>
-        <div class="timer-big mono" id="bingoFuelValue" style="font-size:24px; margin:0;">—</div>
+    <!-- Lives inside the Mission body (not as its own card) because it is only
+         ever of interest while on station. Collapsed by itself as well, so it
+         costs one line until you actually want it. Hidden entirely unless
+         enabled in Settings. Distance always starts blank each leg;
+         Speed/Burn pre-fill from Settings - see applyBingoDefaults(). -->
+    <div class="bingo-sub collapsed" id="bingoBlock" style="display:none;">
+      <div class="bingo-header" id="bingoHeader">
+        <div class="bingo-title">Bingo Fuel</div>
+        <div class="bingo-head-right">
+          <span class="bingo-summary mono" id="bingoSummary"></span>
+          <span class="bingo-chevron" id="bingoChevron" aria-hidden="true">›</span>
+        </div>
       </div>
-      <div style="text-align:right;">
-        <div class="hoist-label">Time to Bingo</div>
-        <div class="timer-big mono" id="bingoTimeValue" style="font-size:24px; margin:0;">—</div>
+      <div class="bingo-body" id="bingoBody">
+        <div class="fuel-row" style="justify-content:space-between;">
+          <label for="bingoDistance">Distance to base (nm)</label>
+          <input class="bingo-input mono" id="bingoDistance" type="text" inputmode="decimal" placeholder="nm">
+        </div>
+        <div class="fuel-row" style="justify-content:space-between;">
+          <label for="bingoSpeed">Speed (kt)</label>
+          <input class="bingo-input mono" id="bingoSpeed" type="text" inputmode="decimal" placeholder="kt">
+        </div>
+        <div class="fuel-row" style="justify-content:space-between;">
+          <label for="bingoCruiseBurn">Cruise burn (kg/hr)</label>
+          <input class="bingo-input mono" id="bingoCruiseBurn" type="text" inputmode="decimal" placeholder="kg/hr">
+        </div>
+        <div class="fuel-row" style="justify-content:space-between;">
+          <label for="bingoMissionBurn">Mission burn (kg/hr)</label>
+          <input class="bingo-input mono" id="bingoMissionBurn" type="text" inputmode="decimal" placeholder="kg/hr">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px;">
+          <div>
+            <div class="hoist-label">Bingo Fuel</div>
+            <div class="timer-big mono" id="bingoFuelValue" style="font-size:24px; margin:0;">—</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="hoist-label">Time to Bingo</div>
+            <div class="timer-big mono" id="bingoTimeValue" style="font-size:24px; margin:0;">—</div>
+          </div>
+        </div>
+        <div class="timer-sub" id="bingoStatus" style="margin-top:8px;"></div>
       </div>
     </div>
-    <div class="timer-sub" id="bingoStatus" style="margin-top:8px;"></div>
+    </div>
   </div>
 
   <div class="step" id="step-landed" data-key="landed">
@@ -722,7 +774,7 @@
         <div class="value mono" id="calcRemaining">—</div>
       </div>
     </div>
-    <div class="timer-sub" id="calcStatus" style="margin: 10px 2px;"></div>
+    <div class="calc-status" id="calcStatus"></div>
   </div>
 </div>
 
@@ -766,7 +818,7 @@ function bingoEnabled(){
 }
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v74';
+const APP_VERSION = 'v75';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -1084,6 +1136,15 @@ function renderBingoSwitch(){
 function updateBingoVisibility(){
   document.getElementById('bingoBlock').style.display = bingoEnabled() ? '' : 'none';
 }
+// Whether the user has opened the Bingo sub-block inside the Mission card.
+// Unlike Mission, nothing ever forces it open - it is purely opt-in, and the
+// collapsed header carries the Time to Bingo so leaving it shut costs nothing.
+let bingoOpen = false;
+let bingoSummaryText = '';
+function updateBingoCard(){
+  document.getElementById('bingoBlock').classList.toggle('collapsed', !bingoOpen);
+  document.getElementById('bingoSummary').textContent = bingoOpen ? '' : bingoSummaryText;
+}
 // Speed/Burn pre-fill from Settings on a fresh leg but stay editable without
 // touching Settings, since the figures can differ day to day. Distance
 // always starts blank - it isn't a stable default the way Speed/Burn are.
@@ -1121,6 +1182,8 @@ function updateBingo(){
     timeVal.textContent = '—';
     status.textContent = 'Enter distance, speed and both fuel burns';
     card.classList.remove('bingo-overdue');
+    bingoSummaryText = '';
+    updateBingoCard();
     return;
   }
   const fuelHome = (distance / speed) * cruiseBurn;
@@ -1132,6 +1195,10 @@ function updateBingo(){
     timeVal.textContent = '—';
     status.textContent = 'Enter Mission fuel to start the countdown';
     card.classList.remove('bingo-overdue');
+    // Nothing to count down yet, but the bingo figure itself is known and is
+    // the one thing worth seeing from the collapsed header at this point.
+    bingoSummaryText = fmtFuel(bingoFuel) + 'kg';
+    updateBingoCard();
     return;
   }
   const elapsedHrs = timerTotalMs(timers.mission, new Date()) / 3600000;
@@ -1141,10 +1208,13 @@ function updateBingo(){
   if (minsToBingo <= 0){
     timeVal.textContent = 'BINGO';
     card.classList.add('bingo-overdue');
+    bingoSummaryText = 'BINGO';
   } else {
     timeVal.textContent = fmtDuration(Math.round(minsToBingo));
     card.classList.remove('bingo-overdue');
+    bingoSummaryText = fmtDuration(Math.round(minsToBingo));
   }
+  updateBingoCard();
 }
 
 // Standalone "can we make it there?" scratch pad. Reads nothing from the leg
@@ -1172,11 +1242,13 @@ function updateCalc(){
 
   remVal.classList.remove('calc-warn');
   status.classList.remove('calc-warn');
+  status.classList.remove('calc-hint');
 
   if (isNaN(distance) || isNaN(speed) || speed <= 0 || isNaN(burn) || burn <= 0){
     timeVal.textContent = '—';
     reqVal.textContent = '—';
     remVal.textContent = '—';
+    status.classList.add('calc-hint');
     status.textContent = 'Enter distance, speed and cruise burn';
     return;
   }
@@ -1189,6 +1261,7 @@ function updateCalc(){
   // when you're just sizing up a diversion.
   if (isNaN(currentFuel)){
     remVal.textContent = '—';
+    status.classList.add('calc-hint');
     status.textContent = 'Enter current fuel for remaining and reserve check';
     return;
   }
@@ -1393,9 +1466,11 @@ function clearLegFields(){
   document.getElementById('routeInput').value = '';
   missionOpen = false;
   shutdownOpen = false;
+  bingoOpen = false;
   resetTimers();
   applyBingoDefaults();
   updateBingo();
+  updateBingoCard();
 }
 
 function resetLeg(){
@@ -1780,6 +1855,13 @@ document.getElementById('missionHeader').addEventListener('click', ()=>{
   updateMissionCard();
 });
 
+// Nothing ever forces the Bingo sub-block open, so this is a plain toggle -
+// no need for the !(open || forced) shape the Mission and Shutdown rows use.
+document.getElementById('bingoHeader').addEventListener('click', ()=>{
+  bingoOpen = !bingoOpen;
+  updateBingoCard();
+});
+
 document.getElementById('resetBtn').addEventListener('click', resetLeg);
 
 document.getElementById('saveBtn').addEventListener('click', ()=>{
@@ -2026,6 +2108,7 @@ document.getElementById('regInput').addEventListener('change', (e)=>{
   renderTimer('mission');
   tickTimers();
   updateBingo();
+  updateBingoCard();
 })();
 
 function setSettingsOpen(open){

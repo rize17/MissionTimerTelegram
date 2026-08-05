@@ -255,11 +255,26 @@ would be easy; losing the leg is the reason not to.
   Reserve.
 
 ## Bingo Fuel block
-Shown on the main page under the Mission card, only when enabled in Settings
-(`#bingoBlock`, `updateBingoVisibility()`). Answers "when do I need to leave
-station to get back to base with reserve left" from four inputs — Distance
-to Base, Speed, Cruise Burn, Mission Burn — plus the Mission Start fuel
-reading already captured on the Mission card.
+**Lives inside the Mission card's body** (`#bingoBlock`, a `.bingo-sub` nested
+in `.mission-body`), not as a card of its own, and only when enabled in
+Settings (`updateBingoVisibility()`). It is only ever of interest while on
+station, so it inherits Mission's own collapse — and collapses again
+separately within it. Answers "when do I need to leave station to get back to
+base with reserve left" from four inputs — Distance to Base, Speed, Cruise
+Burn, Mission Burn — plus the Mission Start fuel reading already captured on
+the Mission card.
+- **Collapsed by default and never force-opened**, unlike Mission/Shutdown —
+  it's purely opt-in, so `#bingoHeader`'s toggle is a plain `bingoOpen =
+  !bingoOpen` rather than the `!(open || forced)` shape those two need.
+  `clearLegFields()` resets it to false.
+- The collapsed header carries the figure worth glancing at, so leaving it
+  shut costs nothing: Time to Bingo once counting, the bingo fuel figure
+  before Mission fuel is entered, blank when inputs are missing.
+  `updateBingo()` sets `bingoSummaryText`, `updateBingoCard()` renders it (and
+  blanks it while expanded, same as the Mission summary).
+- Past bingo, `.bingo-overdue` colours the **title and collapsed summary** as
+  well as the body — it will usually be sitting collapsed when it trips, so
+  the collapsed state has to show it.
 - **Two separate burn rates, not one.** Hover/on-station burn is well above
   cruise, so a single figure would be wrong in whichever direction it wasn't
   set for. **Cruise Burn** feeds the fuel needed to actually fly home
@@ -292,8 +307,10 @@ reading already captured on the Mission card.
   entered.
 
 ## Flight calculator (`#calcOverlay`)
-A scratch "can we make it there?" pad, opened by the **÷ button in the header**
-next to the gear. Deliberately a header button and *not* buried in Settings:
+A scratch "can we make it there?" pad, opened by the **÷ button in the header**,
+placed on the *far side of the reg display from the gear* — the two sat side by
+side at first and were too close to hit reliably. Deliberately a header button
+and *not* buried in Settings:
 it's reached mid-flight when something has run long and you need an answer
 fast, so it has to be one tap. Same in-page overlay rule as Settings — real
 navigation would wipe the leg in progress.
@@ -317,6 +334,11 @@ navigation would wipe the leg in progress.
   zero reports how far short, remaining below reserve says so, otherwise it
   reports the margin above reserve. Failures turn the value and status red
   (`.calc-warn`). No reserve set means no check, just the bare figures.
+- The reserve verdict (`.calc-status`) is **the line you act on**, so it reads
+  at 16px bold amber — the same weight as the figures above it, not fine
+  print. It drops back to a small dim hint (`.calc-hint`) while it's only
+  prompting for missing inputs, so the emphasis is on results rather than
+  instructions.
 
 ## Confirmation dialogs
 `window.confirm()` renders as OK/Cancel on iOS Safari with no way to relabel
