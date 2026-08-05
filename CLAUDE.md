@@ -227,6 +227,23 @@ jumping to today). Reset Leg doubles as Cancel — the buttons relabel to
   reflected immediately — there's no stale per-leg value to go out of sync.
 - Clear all calls `setEditing(null)`, since indices are meaningless afterwards.
 
+## Settings panel
+A gear button in the header opens `#settingsOverlay`, holding the aircraft Reg
+and the Notifications controls. **It is an in-page overlay, not a separate
+document, and must stay that way**: the leg in progress (`current`, `fuel`,
+`timers`, `hoistCount`) lives only in memory until Save Leg, so any real page
+navigation would silently destroy a leg mid-sortie. Caching a second page
+would be easy; losing the leg is the reason not to.
+- **Reg** is edited here but still shown read-only in the header
+  (`#regDisplay`), so it's always visible which aircraft is being logged
+  against — otherwise a wrong reg is only caught after saving.
+- **Notifications on/off** (`NOTIFY_KEY`) gates `sendTelegram()` at the top,
+  so events are silenced without clearing the Relay URL — the URL stays put
+  and doesn't have to be re-pasted to resume. **Absent means on**, so installs
+  from before this existed are unaffected.
+- Done saves the Relay URL on the way out as well as the Save button, so a
+  typed-but-unsaved URL isn't lost by tapping Done.
+
 ## Confirmation dialogs
 `window.confirm()` renders as OK/Cancel on iOS Safari with no way to relabel
 the buttons, so all prompts use the in-app sheet instead.

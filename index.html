@@ -51,16 +51,8 @@
     font-size: 15px; letter-spacing: 0.14em; text-transform: uppercase;
     font-weight: 700; color: var(--text); margin:0;
   }
-  header .reg{
-    font-size: 13px; color: var(--amber); font-weight:600;
-    background: none; border: none; text-align:right;
-    border-bottom: 1px dashed var(--amber-dim);
-    padding: 2px 0; width: 90px;
-  }
-  header .reg:focus{ outline:none; border-bottom-color: var(--amber); }
-  header .reg::placeholder{ color: #4a3a1a; font-style: italic; font-weight:400; }
   header .header-right{
-    display:flex; flex-direction:column; align-items:flex-end; gap:4px;
+    display:flex; flex-direction:row; align-items:center; gap:10px;
   }
   header .header-left{ display:flex; align-items:baseline; gap:8px; }
   header .app-version{
@@ -361,6 +353,54 @@
      readable label rather than being squeezed into thirds at 375px. */
   .confirm-sheet .row.stacked{ flex-direction: column; }
   .confirm-sheet button.confirm-danger{ background: transparent; color: var(--red); border-color: #5a2626; }
+
+  /* Reg is read-only here - it is set in Settings. Kept on screen so you can
+     always see which aircraft the leg is being logged against. */
+  .reg-display{
+    font-size: 13px; color: var(--amber); font-weight:600; letter-spacing:0.04em;
+  }
+  .reg-display:empty::before{ content: 'No reg'; color: #4a3a1a; font-style: italic; font-weight:400; }
+  .gear-btn{
+    -webkit-appearance:none; appearance:none; background:none; border:none;
+    color: var(--text-dim); font-size: 20px; line-height:1; padding: 2px 0 2px 4px;
+    cursor:pointer;
+  }
+  .gear-btn:active{ color: var(--amber); }
+
+  .settings-overlay{
+    position:fixed; inset:0; background: var(--bg); z-index: 9998;
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
+    display:none;
+  }
+  .settings-overlay.show{ display:block; }
+  .settings-sheet{ max-width:480px; margin:0 auto; padding: 18px 16px 40px; }
+  .settings-bar{
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding: 6px 2px 16px; border-bottom:1px solid var(--line); margin-bottom: 6px;
+  }
+  .settings-bar h2{
+    font-size: 15px; letter-spacing:0.14em; text-transform:uppercase;
+    font-weight:700; color: var(--text); margin:0;
+  }
+  .settings-done{
+    -webkit-appearance:none; appearance:none; background:none; border:none;
+    color: var(--amber); font-size:15px; font-weight:700; cursor:pointer; padding:4px;
+  }
+
+  /* On/off switch - lets notifications be silenced without clearing the relay
+     URL, so the URL doesn't have to be re-entered to turn them back on. */
+  .switch{
+    -webkit-appearance:none; appearance:none; border:none; cursor:pointer;
+    width: 52px; height: 32px; border-radius: 16px; padding: 3px;
+    background: #2a333c; transition: background .15s ease; flex: 0 0 auto;
+    display:flex; align-items:center;
+  }
+  .switch[aria-checked="true"]{ background: var(--green); }
+  .switch-knob{
+    width: 26px; height: 26px; border-radius: 50%; background: #e6ecf0;
+    transition: transform .15s ease; display:block;
+  }
+  .switch[aria-checked="true"] .switch-knob{ transform: translateX(20px); }
 </style>
 </head>
 <body>
@@ -371,7 +411,8 @@
       <span class="app-version mono" id="appVersion"></span>
     </div>
     <div class="header-right">
-      <input class="reg mono" id="regInput" placeholder="Reg" maxlength="10">
+      <span class="reg-display mono" id="regDisplay"></span>
+      <button type="button" class="gear-btn" id="settingsBtn" aria-label="Settings">⚙</button>
     </div>
   </header>
 
@@ -511,15 +552,41 @@
     </div>
   </div>
 
-  <div class="section-label" id="notifToggle" style="cursor:pointer;">Notifications ▸</div>
-  <div class="timer-card" id="notifPanel" style="display:none;">
-    <div class="fuel-row">
-      <label for="workerUrl">Relay URL</label>
-      <input class="fuel-input mono" id="workerUrl" type="text" placeholder="https://...workers.dev">
+</div>
+
+<!-- Settings is an in-page panel, not a separate document: the leg in progress
+     lives only in memory, so any real navigation would wipe it. -->
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-sheet">
+    <div class="settings-bar">
+      <h2>Settings</h2>
+      <button type="button" class="settings-done" id="settingsDone">Done</button>
     </div>
-    <div class="actions" style="margin-top:14px;">
-      <button class="btn-timer" id="tgSaveBtn" style="flex:1; width:auto;">Save</button>
-      <button class="btn-timer" id="tgTestBtn" style="flex:1; width:auto;">Send Test</button>
+
+    <div class="section-label">Aircraft</div>
+    <div class="timer-card">
+      <div class="fuel-row" style="margin:0; padding:0; border:none;">
+        <label for="regInput">Reg</label>
+        <input class="fuel-input mono" id="regInput" type="text" placeholder="ZT-___" maxlength="10" style="width:auto; flex:1; text-align:left;">
+      </div>
+    </div>
+
+    <div class="section-label">Notifications</div>
+    <div class="timer-card">
+      <div class="fuel-row" style="margin:0; padding:0; border:none; justify-content:space-between;">
+        <label for="notifEnabled" style="text-transform:none; font-size:14px; color:var(--text);">Send notifications</label>
+        <button type="button" class="switch" id="notifEnabled" role="switch" aria-checked="false">
+          <span class="switch-knob"></span>
+        </button>
+      </div>
+      <div class="fuel-row" style="margin-top:14px;">
+        <label for="workerUrl">Relay URL</label>
+        <input class="fuel-input mono" id="workerUrl" type="text" placeholder="https://...workers.dev" style="width:auto; flex:1; text-align:left;">
+      </div>
+      <div class="actions" style="margin-top:14px;">
+        <button class="btn-timer" id="tgSaveBtn" style="flex:1; width:auto;">Save</button>
+        <button class="btn-timer" id="tgTestBtn" style="flex:1; width:auto;">Send Test</button>
+      </div>
     </div>
   </div>
 </div>
@@ -540,9 +607,16 @@
 const STORAGE_KEY = 'flight-timer:legs';
 const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
+// Lets notifications be silenced without clearing the relay URL, so turning
+// them back on doesn't mean finding and re-pasting it. Absent means on, so
+// existing installs keep working exactly as before.
+const NOTIFY_KEY = 'flight-timer:notify_enabled';
+function notificationsEnabled(){
+  try{ return localStorage.getItem(NOTIFY_KEY) !== 'off'; }catch(e){ return true; }
+}
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v69';
+const APP_VERSION = 'v70';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -583,6 +657,7 @@ function fuelPartsFor(leg){
 }
 
 async function sendTelegram(text){
+  if (!notificationsEnabled()) return;
   let url;
   try{
     url = localStorage.getItem(WORKER_URL_KEY);
@@ -1630,8 +1705,16 @@ document.getElementById('clearHistory').addEventListener('click', async ()=>{
   showToast('History cleared');
 });
 
+// Reg is edited in Settings but shown read-only in the header, so you can
+// always see which aircraft the leg is being logged against.
+function renderRegDisplay(){
+  document.getElementById('regDisplay').textContent =
+    document.getElementById('regInput').value.trim();
+}
+document.getElementById('regInput').addEventListener('input', renderRegDisplay);
 document.getElementById('regInput').addEventListener('change', (e)=>{
-  try{ localStorage.setItem(REG_KEY, e.target.value); }catch(err){}
+  try{ localStorage.setItem(REG_KEY, e.target.value.trim()); }catch(err){}
+  renderRegDisplay();
 });
 
 (function init(){
@@ -1641,6 +1724,8 @@ document.getElementById('regInput').addEventListener('change', (e)=>{
     const workerUrl = localStorage.getItem(WORKER_URL_KEY);
     if (workerUrl) document.getElementById('workerUrl').value = workerUrl;
   }catch(e){}
+  renderRegDisplay();
+  renderNotifySwitch();
   const legs = loadHistory();
   renderHistory(legs);
   applyCarryOver();
@@ -1650,21 +1735,43 @@ document.getElementById('regInput').addEventListener('change', (e)=>{
   tickTimers();
 })();
 
-document.getElementById('notifToggle').addEventListener('click', ()=>{
-  const panel = document.getElementById('notifPanel');
-  const isOpen = panel.style.display !== 'none';
-  panel.style.display = isOpen ? 'none' : 'block';
-  document.getElementById('notifToggle').textContent = isOpen ? 'Notifications ▸' : 'Notifications ▾';
+function setSettingsOpen(open){
+  document.getElementById('settingsOverlay').classList.toggle('show', open);
+}
+document.getElementById('settingsBtn').addEventListener('click', ()=> setSettingsOpen(true));
+document.getElementById('settingsDone').addEventListener('click', ()=>{
+  // Save the relay URL on the way out too, so a typed-but-unsaved URL isn't
+  // silently lost by tapping Done instead of Save.
+  try{ localStorage.setItem(WORKER_URL_KEY, document.getElementById('workerUrl').value.trim()); }catch(e){}
+  setSettingsOpen(false);
+});
+
+function renderNotifySwitch(){
+  document.getElementById('notifEnabled').setAttribute('aria-checked', notificationsEnabled() ? 'true' : 'false');
+}
+document.getElementById('notifEnabled').addEventListener('click', ()=>{
+  const turningOff = notificationsEnabled();
+  try{ localStorage.setItem(NOTIFY_KEY, turningOff ? 'off' : 'on'); }catch(e){}
+  renderNotifySwitch();
+  showToast(turningOff ? 'Notifications off' : 'Notifications on');
 });
 
 document.getElementById('tgSaveBtn').addEventListener('click', ()=>{
   try{
     localStorage.setItem(WORKER_URL_KEY, document.getElementById('workerUrl').value.trim());
-    showToast('Settings saved');
+    showToast('Relay URL saved');
   }catch(e){}
 });
 
 document.getElementById('tgTestBtn').addEventListener('click', ()=>{
+  if (!notificationsEnabled()){
+    showToast('Notifications are off');
+    return;
+  }
+  if (!document.getElementById('workerUrl').value.trim()){
+    showToast('No relay URL set');
+    return;
+  }
   sendTelegram(buildTelegramMessage('Test message'));
   showToast('Test sent');
 });
@@ -1705,7 +1812,7 @@ if ('serviceWorker' in navigator){
     bar.style.display = 'none';
   }
 
-  document.querySelectorAll('input.fuel-input, input.reg, input.route').forEach(inp=>{
+  document.querySelectorAll('input.fuel-input, input.route').forEach(inp=>{
     inp.addEventListener('focus', showBar);
     inp.addEventListener('blur', ()=>{
       setTimeout(()=>{
