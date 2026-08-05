@@ -52,6 +52,18 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   Consequence: Start-Stop time accrues to whichever leg finally records the
   shutdown, covering the whole continuous run. Legs without a shutdown show
   Start-Stop as "—", so nothing is double counted.
+  **Each carried leg's `off_blocks` is a frozen copy**, taken from whichever
+  leg was last in history *at the moment it was saved* - editing an earlier
+  leg's Start after the fact does not retroactively update copies already
+  saved on later legs in the same chain. Every place that turns a leg's
+  off_blocks into a Start→Shutdown span (the leg card's Total, Total Blades
+  Turning, the export, the live top-of-page timer, and `applyCarryOver()`
+  itself when starting the next leg) therefore resolves it through
+  `blockStartFor(legs, i)` instead of reading `leg.off_blocks` directly - it
+  walks back through the carried chain to the leg that actually captured the
+  Start and uses *that* leg's current value live, so an edit anywhere in the
+  chain is reflected everywhere downstream immediately, not just on the leg
+  that was directly edited.
 - **Paired fuel readings.** Start/Lift and Land/End each happen minutes apart, so
   one reading covers the pair. Start and End are primary (Fuel Used is Start −
   End): a value in Start hides the Lift box, a value in End hides the Land box.

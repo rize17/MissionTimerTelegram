@@ -512,7 +512,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v58';
+const APP_VERSION = 'v59';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -710,6 +710,19 @@ function currentRunLegs(legs){
   return legs.slice(start);
 }
 
+// The Start that actually drives leg i's Start->Shutdown span: its own
+// off_blocks if it captured its own Start, otherwise walk back through the
+// carried chain to the leg that did. Each carried leg only stores a frozen
+// copy of that Start from whenever *it* was saved, so editing an earlier
+// leg's Start wouldn't otherwise reach later legs already saved against the
+// old value - looking it up live here means an edit anywhere in the chain is
+// reflected everywhere downstream immediately.
+function blockStartFor(legs, i){
+  let j = i;
+  while (j > 0 && legs[j].startCarried) j--;
+  return (legs[j] && legs[j].off_blocks) ? legs[j].off_blocks : null;
+}
+
 // Total time between startKey and endKey across the current engine run only,
 // plus the leg in progress if its startKey is captured but its endKey is not
 // yet - so the figure keeps running live rather than jumping only when a leg
@@ -720,8 +733,9 @@ function currentRunLegs(legs){
 // only ever counted once, on whichever leg finally captures the end.
 function totalMsBetween(startKey, endKey){
   const legs = currentRunLegs(loadHistory());
-  let ms = legs.reduce((sum, leg)=>{
-    if (leg[startKey] && leg[endKey]) return sum + (new Date(leg[endKey]) - new Date(leg[startKey]));
+  let ms = legs.reduce((sum, leg, i)=>{
+    const startVal = startKey === 'off_blocks' ? blockStartFor(legs, i) : leg[startKey];
+    if (startVal && leg[endKey]) return sum + (new Date(leg[endKey]) - new Date(startVal));
     return sum;
   }, 0);
   if (current[startKey] && !current[endKey]) ms += (new Date() - current[startKey]);
@@ -997,10 +1011,12 @@ function loadLegForEdit(index){
 // lock it - there is nothing to capture. Fuel is left blank and still editable,
 // since that is a fresh reading.
 function applyCarryOver(){
-  const prev = loadHistory().slice(-1)[0];
+  const legs = loadHistory();
+  const prev = legs[legs.length - 1];
   const carry = !!(prev && prev.off_blocks && !prev.on_blocks);
   if (carry){
-    current.off_blocks = new Date(prev.off_blocks);
+    const blockStart = blockStartFor(legs, legs.length - 1) || prev.off_blocks;
+    current.off_blocks = new Date(blockStart);
     document.getElementById('disp-off_blocks').value = toHHMM(current.off_blocks);
     document.getElementById('step-off_blocks').classList.add('done');
     // The engine has been running since that start, so its fuel reading still
@@ -1103,8 +1119,11 @@ function renderHistory(legs){
     const uploadedKg = uploadedBetween(legs[i-1], leg);
     const legGround = legGroundMinutes(legs[i-1], leg);
     // Null rather than a dash when there was no shutdown - the whole row is
-    // dropped instead, matching the export.
-    const bt = (leg.off_blocks && leg.on_blocks) ? fmtDuration(diffMinutes(new Date(leg.off_blocks), new Date(leg.on_blocks))) : null;
+    // dropped instead, matching the export. Uses blockStartFor rather than
+    // leg.off_blocks directly so an edit to an earlier leg's Start in the
+    // same carried chain is reflected here immediately.
+    const blockStart = blockStartFor(legs, i);
+    const bt = (blockStart && leg.on_blocks) ? fmtDuration(diffMinutes(new Date(blockStart), new Date(leg.on_blocks))) : null;
     const liftLandDur = (leg.airborne && leg.landed) ? fmtDuration(diffMinutes(new Date(leg.airborne), new Date(leg.landed))) : null;
     const dateStr = leg.savedAt ? new Date(leg.savedAt).toLocaleDateString('en-GB') : '';
     const mission = leg.mission && leg.mission.periods > 0
@@ -1150,8 +1169,9 @@ function renderHistory(legs){
       flyingMins += diffMinutes(new Date(leg.airborne), new Date(leg.landed));
       anyFlying = true;
     }
-    if (leg.off_blocks && leg.on_blocks){
-      turningMins += diffMinutes(new Date(leg.off_blocks), new Date(leg.on_blocks));
+    const blockStart = blockStartFor(legs, i);
+    if (blockStart && leg.on_blocks){
+      turningMins += diffMinutes(new Date(blockStart), new Date(leg.on_blocks));
       anyTurning = true;
     }
     const g = legGroundMinutes(legs[i-1], leg);
@@ -1293,7 +1313,9 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
   showToast(isEdit ? 'Leg updated' : 'Leg saved');
 });
 
-function legToText(leg, prevLeg){
+function legToText(legs, i){
+  const leg = legs[i];
+  const prevLeg = legs[i-1];
   const lines = [];
   lines.push(`Reg: ${leg.reg || ''}`);
   if (leg.route) lines.push(`Route: ${leg.route}`);
@@ -1306,7 +1328,8 @@ function legToText(leg, prevLeg){
   }
   lines.push(`Land: ${leg.landed ? fmtTime(new Date(leg.landed)) : '--:--'}`);
   if (leg.on_blocks) lines.push(`Shutdown: ${fmtTime(new Date(leg.on_blocks))}`);
-  const bt = (leg.off_blocks && leg.on_blocks) ? fmtDuration(diffMinutes(new Date(leg.off_blocks), new Date(leg.on_blocks))) : null;
+  const blockStart = blockStartFor(legs, i);
+  const bt = (blockStart && leg.on_blocks) ? fmtDuration(diffMinutes(new Date(blockStart), new Date(leg.on_blocks))) : null;
   if (bt) lines.push(`Start-Shutdown: ${bt}`);
   const liftLandDur = (leg.airborne && leg.landed) ? fmtDuration(diffMinutes(new Date(leg.airborne), new Date(leg.landed))) : null;
   if (liftLandDur) lines.push(`Lift-Land: ${liftLandDur}`);
@@ -1329,7 +1352,7 @@ async function exportHistory(){
     showToast('No legs to export');
     return;
   }
-  const text = legs.map((leg, i)=> legToText(leg, legs[i-1])).join('\n\n' + '-'.repeat(30) + '\n\n');
+  const text = legs.map((leg, i)=> legToText(legs, i)).join('\n\n' + '-'.repeat(30) + '\n\n');
   const filename = 'flight-legs-' + new Date().toISOString().slice(0,10) + '.txt';
   const blob = new Blob([text], { type: 'text/plain' });
 
