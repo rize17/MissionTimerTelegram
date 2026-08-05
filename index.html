@@ -512,7 +512,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v60';
+const APP_VERSION = 'v61';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -774,6 +774,11 @@ function updateSummary(){
 // Fuel on board at the end of a leg. Land is the reading meant for this, but
 // the pairing rule hides that box when a Shutdown reading was taken instead,
 // so fall back to it.
+// Rounds to 1 decimal place and drops a trailing ".0" - fuel readings are
+// normally whole kg, and the decimal only adds noise in that case.
+function fmtFuel(n){
+  return Number(n.toFixed(1)).toString();
+}
 function legEndFuel(leg){
   const f = leg.fuel || {};
   const land = parseFloat(f.landed);
@@ -1150,7 +1155,7 @@ function renderHistory(legs){
     const legFuelUsed = periodFuelUsedFor(legs, i);
     const fuelParts = fuelPartsFor(leg.fuel);
     const fuelLine = fuelParts.length
-      ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">${fuelParts.join(' · ')}</span>${legFuelUsed!==null ? `<span class="durations mono">Used ${legFuelUsed.toFixed(1)}kg</span>` : ''}</div>`
+      ? `<div class="row2"><span class="times mono" style="color:var(--text-dim); font-size:11px;">${fuelParts.join(' · ')}</span>${legFuelUsed!==null ? `<span class="durations mono">Used ${fmtFuel(legFuelUsed)}kg</span>` : ''}</div>`
       : '';
     return `<div class="leg-card${editingIndex === i ? ' editing' : ''}" data-index="${i}">
       <div class="row1"><span>${leg.reg || ''}${leg.route ? ' · ' + leg.route : ''}</span><span>${dateStr}</span></div>
@@ -1207,7 +1212,7 @@ function renderHistory(legs){
     ['rowFlyingTime',    'totalFlyingTime',    anyFlying,   ()=> fmtDuration(flyingMins)],
     ['rowBladesTurning', 'totalBladesTurning', anyTurning,  ()=> fmtDuration(turningMins)],
     ['rowGroundTime',    'totalGroundTime',    anyGround,   ()=> fmtDuration(groundMins)],
-    ['rowFuelUsed',     'totalFuelUsed',     anyFuelUsed, ()=> fuelUsed.toFixed(1) + ' kg'],
+    ['rowFuelUsed',     'totalFuelUsed',     anyFuelUsed, ()=> fmtFuel(fuelUsed) + ' kg'],
     ['rowFuelUploaded', 'totalFuelUploaded', anyUploaded, ()=> uploaded.toFixed(1) + ' kg']
   ];
   rows.forEach(([rowId, valId, has, fmt])=>{
@@ -1359,7 +1364,7 @@ function legToText(legs, i){
     const fuelParts = fuelPartsFor(leg.fuel);
     if (fuelParts.length) lines.push(`Fuel: ${fuelParts.join(', ')}`);
     const used = periodFuelUsedFor(legs, i);
-    if (used !== null) lines.push(`Fuel Used: ${used.toFixed(1)}kg`);
+    if (used !== null) lines.push(`Fuel Used: ${fmtFuel(used)}kg`);
   }
   return lines.join('\n');
 }
