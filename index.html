@@ -324,7 +324,9 @@
   .empty{ color: var(--text-dim); font-size: 13px; text-align:center; padding: 20px 0; }
 
   .toast{
-    position:fixed; bottom: 24px; left:50%; transform:translateX(-50%);
+    /* Above every overlay - without this it paints behind the Settings panel,
+       so a toast fired from Settings fires invisibly. */
+    position:fixed; bottom: 24px; left:50%; transform:translateX(-50%); z-index: 10001;
     background: var(--green); color:#052014; font-weight:700; font-size:13px;
     padding: 10px 18px; border-radius: 20px; opacity:0; pointer-events:none;
     transition: opacity .2s ease, transform .2s ease;
@@ -584,7 +586,6 @@
         <input class="fuel-input mono" id="workerUrl" type="text" placeholder="https://...workers.dev" style="width:auto; flex:1; text-align:left;">
       </div>
       <div class="actions" style="margin-top:14px;">
-        <button class="btn-timer" id="tgSaveBtn" style="flex:1; width:auto;">Save</button>
         <button class="btn-timer" id="tgTestBtn" style="flex:1; width:auto;">Send Test</button>
       </div>
     </div>
@@ -616,7 +617,7 @@ function notificationsEnabled(){
 }
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v70';
+const APP_VERSION = 'v71';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -1740,8 +1741,9 @@ function setSettingsOpen(open){
 }
 document.getElementById('settingsBtn').addEventListener('click', ()=> setSettingsOpen(true));
 document.getElementById('settingsDone').addEventListener('click', ()=>{
-  // Save the relay URL on the way out too, so a typed-but-unsaved URL isn't
-  // silently lost by tapping Done instead of Save.
+  // Belt and braces: tapping Done can commit the value before the field's own
+  // change event lands, so write it here too. Silent - the field's change
+  // handler is what confirms.
   try{ localStorage.setItem(WORKER_URL_KEY, document.getElementById('workerUrl').value.trim()); }catch(e){}
   setSettingsOpen(false);
 });
@@ -1756,11 +1758,14 @@ document.getElementById('notifEnabled').addEventListener('click', ()=>{
   showToast(turningOff ? 'Notifications off' : 'Notifications on');
 });
 
-document.getElementById('tgSaveBtn').addEventListener('click', ()=>{
+// No Save button: the Relay URL commits when you finish editing it, the same
+// way the Reg and the switch already did. change only fires when the value
+// actually changed, so the confirmation isn't noise on every blur.
+document.getElementById('workerUrl').addEventListener('change', (e)=>{
   try{
-    localStorage.setItem(WORKER_URL_KEY, document.getElementById('workerUrl').value.trim());
-    showToast('Relay URL saved');
-  }catch(e){}
+    localStorage.setItem(WORKER_URL_KEY, e.target.value.trim());
+    showToast(e.target.value.trim() ? 'Relay URL saved' : 'Relay URL cleared');
+  }catch(err){}
 });
 
 document.getElementById('tgTestBtn').addEventListener('click', ()=>{

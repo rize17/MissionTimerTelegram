@@ -241,8 +241,13 @@ would be easy; losing the leg is the reason not to.
   so events are silenced without clearing the Relay URL — the URL stays put
   and doesn't have to be re-pasted to resume. **Absent means on**, so installs
   from before this existed are unaffected.
-- Done saves the Relay URL on the way out as well as the Save button, so a
-  typed-but-unsaved URL isn't lost by tapping Done.
+- **No Save button.** Every setting commits as you finish it — Reg and Relay
+  URL on `change`, the switch on tap — with a toast confirming. Done only
+  closes the panel (it still writes the URL silently, since a tap can beat the
+  field's own `change` event).
+- `.toast` needs its `z-index: 10001`, above the Settings overlay's 9998.
+  Without it a toast fired from inside Settings fires *invisibly* behind the
+  panel, which is exactly how the old Save button came to look broken.
 
 ## Confirmation dialogs
 `window.confirm()` renders as OK/Cancel on iOS Safari with no way to relabel
