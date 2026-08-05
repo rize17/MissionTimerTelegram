@@ -419,6 +419,10 @@
   .timer-card.bingo-overdue{ border-color:#8a2222; background: linear-gradient(180deg, #2a1414, #1a1010); }
   .timer-card.bingo-overdue .timer-name,
   .timer-card.bingo-overdue .timer-big{ color:#ff6b6b; }
+  /* Calculator result that fails its check - below final reserve, or simply
+     not enough fuel to make the distance at all. */
+  .summary-row .value.calc-warn{ color:#ff6b6b; }
+  #calcStatus.calc-warn{ color:#ff6b6b; }
 </style>
 </head>
 <body>
@@ -430,6 +434,7 @@
     </div>
     <div class="header-right">
       <span class="reg-display mono" id="regDisplay"></span>
+      <button type="button" class="gear-btn" id="calcBtn" aria-label="Flight calculator">÷</button>
       <button type="button" class="gear-btn" id="settingsBtn" aria-label="Settings">⚙</button>
     </div>
   </header>
@@ -670,6 +675,57 @@
   </div>
 </div>
 
+<!-- Scratch calculator: "can we make it there?" mid-flight. Deliberately
+     shares nothing with the leg in progress - it never reads or writes
+     current/fuel/timers, so a calculation can't corrupt what's being logged.
+     Same in-page overlay rule as Settings: navigating away would wipe the leg. -->
+<div class="settings-overlay" id="calcOverlay">
+  <div class="settings-sheet">
+    <div class="settings-bar">
+      <h2>Calculator</h2>
+      <button type="button" class="settings-done" id="calcDone">Done</button>
+    </div>
+
+    <div class="timer-card">
+      <div class="fuel-row" style="margin:0; padding:0; border:none; justify-content:space-between;">
+        <label for="calcFuel">Current fuel (kg)</label>
+        <input class="bingo-input mono" id="calcFuel" type="text" inputmode="decimal" placeholder="kg">
+      </div>
+      <div class="fuel-row" style="justify-content:space-between;">
+        <label for="calcDistance">Distance (nm)</label>
+        <input class="bingo-input mono" id="calcDistance" type="text" inputmode="decimal" placeholder="nm">
+      </div>
+      <div class="fuel-row" style="justify-content:space-between;">
+        <label for="calcSpeed">Speed (kt)</label>
+        <input class="bingo-input mono" id="calcSpeed" type="text" inputmode="decimal" placeholder="kt">
+      </div>
+      <div class="fuel-row" style="justify-content:space-between;">
+        <label for="calcBurn">Cruise burn (kg/hr)</label>
+        <input class="bingo-input mono" id="calcBurn" type="text" inputmode="decimal" placeholder="kg/hr">
+      </div>
+      <div class="actions" style="margin-top:14px;">
+        <button class="btn-timer" id="calcClear" style="flex:1; width:auto;">Clear</button>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div class="summary-row">
+        <div class="label">Time</div>
+        <div class="value mono" id="calcTime">—</div>
+      </div>
+      <div class="summary-row">
+        <div class="label">Fuel Required</div>
+        <div class="value mono" id="calcFuelReq">—</div>
+      </div>
+      <div class="summary-row">
+        <div class="label">Fuel Remaining</div>
+        <div class="value mono" id="calcRemaining">—</div>
+      </div>
+    </div>
+    <div class="timer-sub" id="calcStatus" style="margin: 10px 2px;"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast">Leg saved</div>
 
 <div id="doneBar" style="display:none; position:fixed; left:0; right:0; bottom:0; z-index:9999; background:#1c2126; border-top:1px solid #2a2f36; padding:10px 14px; justify-content:flex-end;">
@@ -710,7 +766,7 @@ function bingoEnabled(){
 }
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v73';
+const APP_VERSION = 'v74';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -1088,6 +1144,68 @@ function updateBingo(){
   } else {
     timeVal.textContent = fmtDuration(Math.round(minsToBingo));
     card.classList.remove('bingo-overdue');
+  }
+}
+
+// Standalone "can we make it there?" scratch pad. Reads nothing from the leg
+// in progress and writes nothing back - Speed and Cruise Burn are seeded from
+// the same Settings values Bingo uses, but only into empty boxes, so an edit
+// made here survives closing and reopening the panel.
+function seedCalcDefaults(){
+  try{
+    const speed = document.getElementById('calcSpeed');
+    const burn = document.getElementById('calcBurn');
+    if (!speed.value) speed.value = localStorage.getItem(BINGO_SPEED_KEY) || '';
+    if (!burn.value) burn.value = localStorage.getItem(BINGO_CRUISE_BURN_KEY) || '';
+  }catch(e){}
+}
+function updateCalc(){
+  const timeVal = document.getElementById('calcTime');
+  const reqVal = document.getElementById('calcFuelReq');
+  const remVal = document.getElementById('calcRemaining');
+  const status = document.getElementById('calcStatus');
+  const distance = parseFloat(document.getElementById('calcDistance').value);
+  const speed = parseFloat(document.getElementById('calcSpeed').value);
+  const burn = parseFloat(document.getElementById('calcBurn').value);
+  const currentFuel = parseFloat(document.getElementById('calcFuel').value);
+  const reserve = parseFloat(localStorage.getItem(BINGO_RESERVE_KEY));
+
+  remVal.classList.remove('calc-warn');
+  status.classList.remove('calc-warn');
+
+  if (isNaN(distance) || isNaN(speed) || speed <= 0 || isNaN(burn) || burn <= 0){
+    timeVal.textContent = '—';
+    reqVal.textContent = '—';
+    remVal.textContent = '—';
+    status.textContent = 'Enter distance, speed and cruise burn';
+    return;
+  }
+  const hours = distance / speed;
+  const required = hours * burn;
+  timeVal.textContent = fmtDuration(Math.round(hours * 60));
+  reqVal.textContent = fmtFuel(required) + 'kg';
+
+  // Current fuel is optional - time and fuel required are useful on their own
+  // when you're just sizing up a diversion.
+  if (isNaN(currentFuel)){
+    remVal.textContent = '—';
+    status.textContent = 'Enter current fuel for remaining and reserve check';
+    return;
+  }
+  const remaining = currentFuel - required;
+  remVal.textContent = fmtFuel(remaining) + 'kg';
+  if (remaining < 0){
+    remVal.classList.add('calc-warn');
+    status.classList.add('calc-warn');
+    status.textContent = 'Not enough fuel - short by ' + fmtFuel(Math.abs(remaining)) + 'kg';
+  } else if (!isNaN(reserve) && remaining < reserve){
+    remVal.classList.add('calc-warn');
+    status.classList.add('calc-warn');
+    status.textContent = 'Below final reserve of ' + fmtFuel(reserve) + 'kg';
+  } else if (!isNaN(reserve)){
+    status.textContent = fmtFuel(remaining - reserve) + 'kg above final reserve';
+  } else {
+    status.textContent = '';
   }
 }
 function legEndFuel(leg){
@@ -1920,6 +2038,27 @@ document.getElementById('settingsDone').addEventListener('click', ()=>{
   // handler is what confirms.
   try{ localStorage.setItem(WORKER_URL_KEY, document.getElementById('workerUrl').value.trim()); }catch(e){}
   setSettingsOpen(false);
+});
+
+// Seeding on open (not just at init) picks up Settings changed since the app
+// launched, without ever overwriting a figure typed in the calculator itself.
+document.getElementById('calcBtn').addEventListener('click', ()=>{
+  seedCalcDefaults();
+  updateCalc();
+  document.getElementById('calcOverlay').classList.add('show');
+});
+document.getElementById('calcDone').addEventListener('click', ()=>{
+  document.getElementById('calcOverlay').classList.remove('show');
+});
+document.getElementById('calcClear').addEventListener('click', ()=>{
+  ['calcFuel','calcDistance','calcSpeed','calcBurn'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  seedCalcDefaults();
+  updateCalc();
+});
+['calcFuel','calcDistance','calcSpeed','calcBurn'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', updateCalc);
 });
 
 function renderNotifySwitch(){

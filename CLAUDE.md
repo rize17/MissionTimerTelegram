@@ -291,6 +291,33 @@ reading already captured on the Mission card.
   Cruise Burn and displays independently of whether Mission fuel has been
   entered.
 
+## Flight calculator (`#calcOverlay`)
+A scratch "can we make it there?" pad, opened by the **÷ button in the header**
+next to the gear. Deliberately a header button and *not* buried in Settings:
+it's reached mid-flight when something has run long and you need an answer
+fast, so it has to be one tap. Same in-page overlay rule as Settings — real
+navigation would wipe the leg in progress.
+- **Shares nothing with the leg.** It never reads or writes `current`, `fuel`,
+  `timers` or history, so a what-if calculation can't corrupt what's being
+  logged. Its inputs aren't saved anywhere either; they just live in the DOM
+  for the session.
+- Inputs: Current Fuel, Distance, Speed, Cruise Burn. Speed and Cruise Burn
+  are **seeded from the same Settings values Bingo uses** (`BINGO_SPEED_KEY` /
+  `BINGO_CRUISE_BURN_KEY`) — deliberately shared, they're the same aircraft
+  figures — but `seedCalcDefaults()` only fills **empty** boxes, so an edit
+  made in the calculator survives closing and reopening. Seeding runs on every
+  open, not just at init, so a Settings change made this session is picked up.
+  Clear wipes all four then re-seeds.
+- Outputs: Time (`distance/speed`), Fuel Required (`time × burn`), Fuel
+  Remaining (`current − required`). Recomputed on every keystroke.
+- **Current Fuel is optional** — Time and Fuel Required stand on their own when
+  you're just sizing up a diversion; only Remaining and the reserve check need
+  it.
+- Checked against Final Reserve (same `BINGO_RESERVE_KEY`): remaining below
+  zero reports how far short, remaining below reserve says so, otherwise it
+  reports the margin above reserve. Failures turn the value and status red
+  (`.calc-warn`). No reserve set means no check, just the bare figures.
+
 ## Confirmation dialogs
 `window.confirm()` renders as OK/Cancel on iOS Safari with no way to relabel
 the buttons, so all prompts use the in-app sheet instead.
