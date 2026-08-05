@@ -89,10 +89,26 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   same as a manual time-picker edit already did. Without this, a duration
   computed from the exact second could read a minute off from what simple
   subtraction of the two displayed times suggests.
-- **Start and Shutdown collapse once captured** (`.step.collapsed`), roughly
-  halving their height and hiding the Capture button. The time (and Start's
-  fuel) stays editable for corrections. Note this also hides the "Carried"
-  button label on carry-over legs.
+- **Start collapses once captured** (`.step.collapsed`), roughly halving its
+  height and hiding the Capture button. Its time and fuel stay editable for
+  corrections. Note this also hides the "Carried" button label on carry-over
+  legs.
+- **Shutdown collapses the whole way**, like Mission — only the name, a summary
+  of what was captured, and a chevron. Driven by `updateShutdownRow()`:
+  `expanded = shutdownOpen || legStage() === 'postLand'`, so it appears by
+  itself the moment Land is captured and is shut for the rest of the leg.
+  - The summary (`#shutdownSummary`) and chevron exist **only** in the
+    collapsed state — the expanded row has zero spare width at 375px, so they
+    must measure 0px when open. Don't give them layout when expanded.
+  - Tapping the row toggles it, but the handler ignores taps landing on an
+    `input` or `button` so the time picker, fuel box and Capture still work.
+  - Forced open while it is the live block, so a tap can't close it then —
+    same shape as the Mission toggle, including the
+    `!(shutdownOpen || …)` form so the first tap after capture closes it.
+  - **Capturing Shutdown sets `shutdownOpen = true`**, so the row stays open
+    for the fuel reading rather than shutting the instant you press Capture.
+  - `loadLegForEdit()` opens it when the leg has a shutdown, and
+    `clearLegFields()` resets it to false.
 - **Mission collapses to a single tappable header row** (43px, vs 262px open) —
   the whole `.mission-body` is hidden, not shrunk. Tap `#missionHeader` to
   toggle. Driven by `updateMissionCard()`:

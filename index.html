@@ -126,6 +126,23 @@
   .step.collapsed .step-label .name{ font-size: 11px; }
   .step.collapsed input.fuel-input{ font-size: 13px; padding: 5px 8px; max-width: 72px; }
 
+  /* Shutdown collapses the whole way, like Mission: only the name, a summary
+     of what was captured, and a chevron. Both of those exist solely in the
+     collapsed state - the expanded row has no spare width at 375px, so they
+     must not take any. Tapping the row toggles it (the handler ignores taps
+     that land on an input or button). */
+  .step-summary{ font-size: 13px; color: var(--text-dim); margin-left: auto; }
+  .step-chevron{
+    font-size: 16px; line-height: 1; color: var(--text-dim); display: inline-block;
+    transition: transform .15s ease;
+  }
+  #step-on_blocks:not(.collapsed) .step-summary,
+  #step-on_blocks:not(.collapsed) .step-chevron{ display: none; }
+  #step-on_blocks.collapsed{ padding: 11px 16px; cursor: pointer; }
+  #step-on_blocks.collapsed input.fuel-input,
+  #step-on_blocks.collapsed input.time-display,
+  #step-on_blocks.collapsed button.capture{ display: none; }
+
   /* A carried Start (the engine kept running from the previous leg, so this
      leg has no start of its own) isn't shown collapsed-with-a-value - that
      still looked like something had been captured on this leg. Hide it
@@ -448,9 +465,11 @@
       <div class="step-label">
         <div class="name">Shutdown</div>
       </div>
+      <span class="step-summary mono" id="shutdownSummary"></span>
       <input class="fuel-input mono" id="fuel-on_blocks" data-fuel="on_blocks" type="text" inputmode="decimal" placeholder="kg" aria-label="Shutdown fuel">
       <input type="time" class="time-display mono" id="disp-on_blocks" data-key="on_blocks">
       <button class="capture" data-key="on_blocks">Capture</button>
+      <span class="step-chevron" id="shutdownChevron" aria-hidden="true">›</span>
     </div>
   </div>
 
@@ -523,7 +542,7 @@ const REG_KEY = 'flight-timer:reg';
 const WORKER_URL_KEY = 'flight-timer:worker_url';
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v68';
+const APP_VERSION = 'v69';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -920,6 +939,24 @@ function legStage(){
 // ever hidden while the partner is empty, so a reading already taken is never
 // lost.
 const FUEL_PARTNER = { airborne: 'off_blocks', landed: 'on_blocks' };
+// Whether the user has opened the Shutdown row. It is also forced open for the
+// whole window where it is the live block - Land captured, Shutdown not yet -
+// so it appears by itself the moment you land, and closes again once captured.
+let shutdownOpen = false;
+
+function updateShutdownRow(){
+  const step = document.getElementById('step-on_blocks');
+  const expanded = shutdownOpen || legStage() === 'postLand';
+  step.classList.toggle('collapsed', !expanded);
+  // Collapsed, the row carries whatever was captured, so closing it never
+  // hides a recorded value.
+  const bits = [];
+  if (current.on_blocks) bits.push(toHHMM(current.on_blocks));
+  const f = (fuel.on_blocks || '').trim();
+  if (f) bits.push(f + 'kg');
+  document.getElementById('shutdownSummary').textContent = expanded ? '' : bits.join('  ·  ');
+}
+
 function updateFuelVisibility(){
   const startIsCarried = document.getElementById('step-off_blocks').classList.contains('carried');
   Object.keys(FUEL_PARTNER).forEach(key=>{
@@ -943,10 +980,10 @@ function updateFuelVisibility(){
 
 function updateFocus(){
   const reachable = REACHABLE[legStage()];
-  // Start and Shutdown are history once captured - collapse them and give the
-  // space back. The time (and, for Start, the fuel) stays editable.
+  // Start is history once captured - collapse it and give the space back. The
+  // time and fuel stay editable.
   document.getElementById('step-off_blocks').classList.toggle('collapsed', !!current.off_blocks);
-  document.getElementById('step-on_blocks').classList.toggle('collapsed', !!current.on_blocks);
+  updateShutdownRow();
   updateFuelVisibility();
   Object.keys(BLOCK_ELS).forEach(key=>{
     const el = document.getElementById(BLOCK_ELS[key]);
@@ -968,6 +1005,9 @@ function updateFocus(){
 }
 
 function capture(key){
+  // Stay open after capturing, so the Shutdown fuel reading can still be
+  // entered instead of the row closing the instant you press Capture.
+  if (key === 'on_blocks') shutdownOpen = true;
   const now = new Date();
   now.setSeconds(0, 0);
   current[key] = now;
@@ -995,6 +1035,7 @@ function clearLegFields(){
   document.querySelectorAll('.fuel-input').forEach(input=> input.value = '');
   document.getElementById('routeInput').value = '';
   missionOpen = false;
+  shutdownOpen = false;
   resetTimers();
 }
 
@@ -1076,6 +1117,9 @@ function loadLegForEdit(index){
     // correct - and a collapsed card would hide them.
     missionOpen = true;
   }
+  // Same for Shutdown: an already-complete leg would otherwise open with its
+  // Shutdown row shut, hiding the time and fuel being corrected.
+  if (leg.on_blocks) shutdownOpen = true;
   renderTimer('mission');
 
   // Take the carried flag from the leg itself rather than re-deriving it.
@@ -1292,6 +1336,7 @@ document.querySelectorAll('.fuel-input').forEach(input=>{
     fuel[input.dataset.fuel] = input.value;
     updateSummary();
     updateFuelVisibility();
+    updateShutdownRow();
   });
 });
 
@@ -1355,6 +1400,16 @@ document.getElementById('hoistPlus').addEventListener('click', ()=>{
   hoistCount++;
   document.getElementById('hoistCount').textContent = hoistCount;
   updateMissionCard();
+});
+
+document.getElementById('step-on_blocks').addEventListener('click', (e)=>{
+  // Taps on the time picker, fuel box or Capture button are for those
+  // controls, not for collapsing the row around them.
+  if (e.target.closest('input, button')) return;
+  // Forced open while it is the live block, so a tap that would "close" it has
+  // to clear the flag rather than set it - same shape as the Mission toggle.
+  shutdownOpen = !(shutdownOpen || legStage() === 'postLand');
+  updateFocus();
 });
 
 document.getElementById('missionHeader').addEventListener('click', ()=>{
