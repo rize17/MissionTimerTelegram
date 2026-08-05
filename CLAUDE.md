@@ -60,6 +60,11 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   **Exception:** on a carried (hot-load) leg, Start fuel is copied from the
   previous leg's shutdown-less handoff, not a fresh reading — so it never
   hides the Lift box, which still needs its own number.
+- **Captured times snap to the minute** (`capture()` zeroes seconds/ms) so a
+  button-press timestamp always matches what the HH:MM display shows — the
+  same as a manual time-picker edit already did. Without this, a duration
+  computed from the exact second could read a minute off from what simple
+  subtraction of the two displayed times suggests.
 - **Start and Shutdown collapse once captured** (`.step.collapsed`), roughly
   halving their height and hiding the Capture button. The time (and Start's
   fuel) stays editable for corrections. Note this also hides the "Carried"
@@ -93,20 +98,31 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   Start → Shutdown sits directly under the Shutdown step, above Reset/Save Leg
   - not at the top with Lift → Land. That placement was a deliberate, explicit
   request (moved there in two steps after an initial placement lower down).
-- **Ground time** (`groundMinutes` on a saved leg) is previous leg's Land →
-  this leg's Lift, and is only recorded when the previous leg had **no
-  shutdown** — if the engine stopped, the gap is time parked, not ground time.
-  Null when either time is missing or the result is negative. This is the same
-  condition that triggers the carry-over start, so the two always appear
-  together.
+- **Ground time** (`legGroundMinutes(prevLeg, leg)`) is every engine-running-
+  but-not-flying span attributable to a leg, so that Flying Time + Ground Time
+  always sums to that block's Start→Shutdown (Blades Turning): the carried gap
+  from the previous leg's Land to this leg's Lift (hot-load only, same
+  condition as the carry-over start — if the previous leg shut down, that gap
+  is time parked, not ground time), **plus** this leg's own Start (if not
+  carried — a carried Start is stale, not a real taxi-out) to its own first
+  Lift, **plus** this leg's own Land to its own Shutdown. Null when none of the
+  three apply. **Computed live at render time** from the current leg list (not
+  stored on the leg) — like Fuel Uploaded below — so it self-corrects after an
+  edit changes which leg is now the neighbor, rather than freezing whatever was
+  true at save time. Shown per-leg on the history card and in the export as
+  "Ground Time".
 
 ## Totals summary (below Saved Legs)
-Four rows, each hidden unless at least one saved leg contributes, so the card
+Five rows, each hidden unless at least one saved leg contributes, so the card
 never shows a bare zero for something simply never recorded. The whole card
 hides when none apply.
 - **Total Flying Time** — sum of Lift → Land per leg.
-- **Total Ground Time** — sum of the per-leg `groundMinutes`, so it inherits
-  that field's "engine kept running only" rule and matches the leg cards.
+- **Total Blades Turning** — sum of the per-leg Start → Shutdown span
+  (`off_blocks` to `on_blocks`), i.e. total engine-running time across every
+  completed run.
+- **Total Ground Time** — sum of the per-leg `legGroundMinutes`, so it
+  inherits that function's rules and matches the leg cards. By construction,
+  Total Flying Time + Total Ground Time == Total Blades Turning.
 - **Total Fuel Used** — sum of `fuelUsedFor` (Start − Shutdown) per leg.
 - **Total Fuel Uploaded** — refuelling inferred between legs: more fuel on
   board at the start of a leg than at the end of the previous one.
@@ -136,8 +152,9 @@ jumping to today). Reset Leg doubles as Cancel — the buttons relabel to
   Without this, re-saving an untouched multi-run leg would flatten it and
   inflate its total to the whole span. Touching it *does* accept the flattening —
   that's the agreed tradeoff.
-- Ground time on an edited leg is recomputed against `legs[editingIndex - 1]`,
-  not against whatever is last in history.
+- Ground time is always computed live against the leg's actual neighbor in
+  history at render time, so an edit that changes leg order or neighbors is
+  reflected immediately — there's no stale per-leg value to go out of sync.
 - Clear all calls `setEditing(null)`, since indices are meaningless afterwards.
 
 ## Confirmation dialogs
