@@ -740,12 +740,12 @@
 
     <div class="timer-card">
       <div class="fuel-row" style="margin:0; padding:0; border:none; justify-content:space-between;">
-        <label for="calcFuel">Current fuel (kg)</label>
-        <input class="bingo-input mono" id="calcFuel" type="text" inputmode="decimal" placeholder="kg">
-      </div>
-      <div class="fuel-row" style="justify-content:space-between;">
         <label for="calcDistance">Distance (nm)</label>
         <input class="bingo-input mono" id="calcDistance" type="text" inputmode="decimal" placeholder="nm">
+      </div>
+      <div class="fuel-row" style="justify-content:space-between;">
+        <label for="calcFuel">Current fuel (kg)</label>
+        <input class="bingo-input mono" id="calcFuel" type="text" inputmode="decimal" placeholder="kg">
       </div>
       <div class="fuel-row" style="justify-content:space-between;">
         <label for="calcSpeed">Speed (kt)</label>
@@ -818,7 +818,7 @@ function bingoEnabled(){
 }
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v77';
+const APP_VERSION = 'v78';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
