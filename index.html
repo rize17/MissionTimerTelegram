@@ -773,6 +773,13 @@
         <div class="label">Fuel Remaining</div>
         <div class="value mono" id="calcRemaining">—</div>
       </div>
+      <!-- Independent of Distance: answers "how far can I actually get on what
+           I have", which is the next question the moment the leg above doesn't
+           work out. Label flags when it's a dry-tanks figure. -->
+      <div class="summary-row">
+        <div class="label" id="calcRangeLabel">Max Range</div>
+        <div class="value mono" id="calcRange">—</div>
+      </div>
     </div>
     <div class="calc-status" id="calcStatus"></div>
   </div>
@@ -818,7 +825,7 @@ function bingoEnabled(){
 }
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v78';
+const APP_VERSION = 'v79';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -1243,6 +1250,8 @@ function updateCalc(){
   const timeVal = document.getElementById('calcTime');
   const reqVal = document.getElementById('calcFuelReq');
   const remVal = document.getElementById('calcRemaining');
+  const rangeVal = document.getElementById('calcRange');
+  const rangeLabel = document.getElementById('calcRangeLabel');
   const status = document.getElementById('calcStatus');
   const distance = parseFloat(document.getElementById('calcDistance').value);
   const speed = parseFloat(document.getElementById('calcSpeed').value);
@@ -1251,15 +1260,39 @@ function updateCalc(){
   const reserve = parseFloat(localStorage.getItem(BINGO_RESERVE_KEY));
 
   remVal.classList.remove('calc-warn');
+  rangeVal.classList.remove('calc-warn');
   status.classList.remove('calc-warn');
   status.classList.remove('calc-hint');
 
-  if (isNaN(distance) || isNaN(speed) || speed <= 0 || isNaN(burn) || burn <= 0){
+  const haveRate = !isNaN(speed) && speed > 0 && !isNaN(burn) && burn > 0;
+
+  // Max Range is worked out first and independently of Distance: it's the
+  // answer to "how far can I actually get", which is exactly what you need
+  // the moment a planned leg turns out not to work. Measured down to Final
+  // Reserve when one is set - flying to dry tanks isn't a usable range - and
+  // the label says so when no reserve is set to measure against.
+  rangeLabel.textContent = isNaN(reserve) ? 'Max Range (dry)' : 'Max Range';
+  if (haveRate && !isNaN(currentFuel)){
+    const usable = isNaN(reserve) ? currentFuel : currentFuel - reserve;
+    if (usable > 0){
+      const endurance = usable / burn;
+      rangeVal.textContent = Math.round(endurance * speed) + 'nm · ' + fmtHrsDec(endurance);
+    } else {
+      rangeVal.textContent = '0nm';
+      rangeVal.classList.add('calc-warn');
+    }
+  } else {
+    rangeVal.textContent = '—';
+  }
+
+  if (!haveRate || isNaN(distance)){
     timeVal.textContent = '—';
     reqVal.textContent = '—';
     remVal.textContent = '—';
     status.classList.add('calc-hint');
-    status.textContent = 'Enter distance, speed and cruise burn';
+    status.textContent = !haveRate
+      ? 'Enter speed and cruise burn'
+      : 'Enter distance to check a specific leg';
     return;
   }
   const hours = distance / speed;

@@ -326,7 +326,18 @@ navigation would wipe the leg in progress.
   open, not just at init, so a Settings change made this session is picked up.
   Clear wipes all four then re-seeds.
 - Outputs: Time (`distance/speed`), Fuel Required (`time × burn`), Fuel
-  Remaining (`current − required`). Recomputed on every keystroke.
+  Remaining (`current − required`), and Max Range. Recomputed on every
+  keystroke.
+- **Max Range is deliberately always on, not a mode.** It needs only fuel,
+  speed and burn — never Distance — so it stays on screen answering "how far
+  can I actually get" at the moment a planned leg turns out not to work, with
+  no field to clear and no mode to remember. (Computing it only when Distance
+  is blank was the other option considered and rejected: it makes the same
+  output rows mean different things depending on an invisible state.)
+  Measured **down to Final Reserve**, since range to dry tanks isn't a usable
+  figure; with no reserve set it falls back to total fuel and the label reads
+  "Max Range (dry)" to say so. Shows nm and endurance in decimal hours
+  ("160nm · 1.3"). Reads 0nm in red when already at or below reserve.
 - **Current Fuel is optional** — Time and Fuel Required stand on their own when
   you're just sizing up a diversion; only Remaining and the reserve check need
   it.
