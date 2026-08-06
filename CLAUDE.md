@@ -331,9 +331,17 @@ navigation would wipe the leg in progress.
   you're just sizing up a diversion; only Remaining and the reserve check need
   it.
 - Checked against Final Reserve (same `BINGO_RESERVE_KEY`): remaining below
-  zero reports how far short, remaining below reserve says so, otherwise it
-  reports the margin above reserve. Failures turn the value and status red
-  (`.calc-warn`). No reserve set means no check, just the bare figures.
+  zero reports how far short, remaining below reserve reports how far below,
+  otherwise it reports the margin above reserve. Failures turn the value and
+  status red (`.calc-warn`). No reserve set means no check, just the bare
+  figures.
+- **Every margin is given in kg *and* decimal hours** (`fmtHrsDec`, e.g.
+  "90kg · 0.3 above final reserve") — kg alone doesn't tell you anything until
+  divided by the burn rate. Decimal hours are the aviation convention, so
+  **1.0 means one hour**, and the decimal place is always kept ("1.0", never
+  "1") or a bare whole number reads as something other than hours. The Time
+  output row above still shows h/m, since that's a duration rather than a
+  margin.
 - The reserve verdict (`.calc-status`) is **the line you act on**, so it reads
   at 16px bold amber — the same weight as the figures above it, not fine
   print. It drops back to a small dim hint (`.calc-hint`) while it's only

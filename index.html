@@ -818,7 +818,7 @@ function bingoEnabled(){
 }
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v76';
+const APP_VERSION = 'v77';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -1138,6 +1138,12 @@ function updateSummary(){
 function fmtFuel(n){
   return Number(n.toFixed(1)).toString();
 }
+// Decimal hours, the aviation convention - 1.0 is one hour, 0.3 is 18 minutes.
+// Always keeps the decimal place (so "1.0", not "1"), since a bare whole
+// number would read as something other than hours.
+function fmtHrsDec(hours){
+  return hours.toFixed(1);
+}
 
 function renderBingoSwitch(){
   document.getElementById('bingoEnabled').setAttribute('aria-checked', bingoEnabled() ? 'true' : 'false');
@@ -1271,16 +1277,21 @@ function updateCalc(){
   }
   const remaining = currentFuel - required;
   remVal.textContent = fmtFuel(remaining) + 'kg';
+  // A margin in kg only means something once you divide it by the burn rate,
+  // so the verdict carries both: kg, and what that is worth in time.
+  const asTime = (kg)=> fmtHrsDec(kg / burn);
   if (remaining < 0){
     remVal.classList.add('calc-warn');
     status.classList.add('calc-warn');
-    status.textContent = 'Not enough fuel - short by ' + fmtFuel(Math.abs(remaining)) + 'kg';
+    status.textContent = 'Short by ' + fmtFuel(Math.abs(remaining)) + 'kg · ' + asTime(Math.abs(remaining));
   } else if (!isNaN(reserve) && remaining < reserve){
     remVal.classList.add('calc-warn');
     status.classList.add('calc-warn');
-    status.textContent = 'Below final reserve of ' + fmtFuel(reserve) + 'kg';
+    const short = reserve - remaining;
+    status.textContent = 'Below final reserve by ' + fmtFuel(short) + 'kg · ' + asTime(short);
   } else if (!isNaN(reserve)){
-    status.textContent = fmtFuel(remaining - reserve) + 'kg above final reserve';
+    const margin = remaining - reserve;
+    status.textContent = fmtFuel(margin) + 'kg · ' + asTime(margin) + ' above final reserve';
   } else {
     status.textContent = '';
   }
