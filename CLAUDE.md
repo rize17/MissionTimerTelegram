@@ -341,6 +341,13 @@ navigation would wipe the leg in progress.
 - **Current Fuel is optional** — Time and Fuel Required stand on their own when
   you're just sizing up a diversion; only Remaining and the reserve check need
   it.
+- Field order is Current Fuel, Distance, then the two carried-over figures.
+- **The carried-over figures are visually muted** (`.fuel-row.prefilled`,
+  used here and in the Bingo block): smaller and dimmer than the fields you
+  actually type each time, since Speed and the burn rates are right most of
+  the time and rarely touched. They stay fully editable, and focus restores
+  full contrast so you can see what you're typing — muted must not read as
+  disabled.
 - Checked against Final Reserve (same `BINGO_RESERVE_KEY`): remaining below
   zero reports how far short, remaining below reserve reports how far below,
   otherwise it reports the margin above reserve. Failures turn the value and
@@ -402,5 +409,11 @@ Constraints found when this was scoped (2026-08-04), to plan around later:
 ## Working conventions established so far
 - User is non-technical-by-background but capable; give clear step-by-step instructions when something needs doing outside the code (GitHub, Cloudflare dashboard, Telegram/BotFather)
 - User tests exclusively on an iPhone via Safari / Home Screen — always consider iOS Safari quirks (native time pickers, `data:` URLs can't be added to Home Screen, `type="number"` inputs can't have cursor position set, etc.)
+- **Number fields select their whole value on focus** (all `input.bingo-input`),
+  so tapping in and typing replaces it. iOS drops the caret where you tapped,
+  which on a short figure like "120" means fishing for the end before you can
+  clear it. The `select()` **must be deferred with `setTimeout(…, 0)`** — called
+  synchronously inside `focus`, iOS Safari undoes it when the touch that caused
+  the focus goes on to place the caret.
 - Always bump the version after any change to `index.html`, or changes won't show up on the deployed Home Screen app. Two places, same number: `CACHE_NAME` in `sw.js` and `APP_VERSION` in `index.html`.
 - User prefers minimal/native-feeling UI — avoid adding extra confirmation dialogs or non-native controls where iOS already provides one

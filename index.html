@@ -450,6 +450,16 @@
   }
   input.bingo-input:focus{ outline:none; border-color: var(--amber); }
   input.bingo-input::placeholder{ color: #4a5560; }
+  /* Figures carried over from Settings - speed and the burn rates. They're
+     right most of the time and you rarely touch them, so they sit back rather
+     than competing with the numbers actually typed each time. Still fully
+     editable, and focus brings them back to full contrast so you can see what
+     you're typing. */
+  .fuel-row.prefilled label{ font-size: 10px; color: #4a5560; }
+  .fuel-row.prefilled input.bingo-input{
+    font-size: 13px; padding: 6px 8px; width: 72px; color: var(--text-dim);
+  }
+  .fuel-row.prefilled input.bingo-input:focus{ color: var(--text); }
   .timer-card.bingo-overdue{ border-color:#8a2222; background: linear-gradient(180deg, #2a1414, #1a1010); }
   .timer-card.bingo-overdue .timer-name,
   .timer-card.bingo-overdue .timer-big{ color:#ff6b6b; }
@@ -573,15 +583,15 @@
           <label for="bingoDistance">Distance to base (nm)</label>
           <input class="bingo-input mono" id="bingoDistance" type="text" inputmode="decimal" placeholder="nm">
         </div>
-        <div class="fuel-row" style="justify-content:space-between;">
+        <div class="fuel-row prefilled" style="justify-content:space-between;">
           <label for="bingoSpeed">Speed (kt)</label>
           <input class="bingo-input mono" id="bingoSpeed" type="text" inputmode="decimal" placeholder="kt">
         </div>
-        <div class="fuel-row" style="justify-content:space-between;">
+        <div class="fuel-row prefilled" style="justify-content:space-between;">
           <label for="bingoCruiseBurn">Cruise burn (kg/hr)</label>
           <input class="bingo-input mono" id="bingoCruiseBurn" type="text" inputmode="decimal" placeholder="kg/hr">
         </div>
-        <div class="fuel-row" style="justify-content:space-between;">
+        <div class="fuel-row prefilled" style="justify-content:space-between;">
           <label for="bingoMissionBurn">Mission burn (kg/hr)</label>
           <input class="bingo-input mono" id="bingoMissionBurn" type="text" inputmode="decimal" placeholder="kg/hr">
         </div>
@@ -740,18 +750,18 @@
 
     <div class="timer-card">
       <div class="fuel-row" style="margin:0; padding:0; border:none; justify-content:space-between;">
-        <label for="calcDistance">Distance (nm)</label>
-        <input class="bingo-input mono" id="calcDistance" type="text" inputmode="decimal" placeholder="nm">
-      </div>
-      <div class="fuel-row" style="justify-content:space-between;">
         <label for="calcFuel">Current fuel (kg)</label>
         <input class="bingo-input mono" id="calcFuel" type="text" inputmode="decimal" placeholder="kg">
       </div>
       <div class="fuel-row" style="justify-content:space-between;">
+        <label for="calcDistance">Distance (nm)</label>
+        <input class="bingo-input mono" id="calcDistance" type="text" inputmode="decimal" placeholder="nm">
+      </div>
+      <div class="fuel-row prefilled" style="justify-content:space-between;">
         <label for="calcSpeed">Speed (kt)</label>
         <input class="bingo-input mono" id="calcSpeed" type="text" inputmode="decimal" placeholder="kt">
       </div>
-      <div class="fuel-row" style="justify-content:space-between;">
+      <div class="fuel-row prefilled" style="justify-content:space-between;">
         <label for="calcBurn">Cruise burn (kg/hr)</label>
         <input class="bingo-input mono" id="calcBurn" type="text" inputmode="decimal" placeholder="kg/hr">
       </div>
@@ -825,7 +835,7 @@ function bingoEnabled(){
 }
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v79';
+const APP_VERSION = 'v80';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -2190,6 +2200,19 @@ document.getElementById('calcClear').addEventListener('click', ()=>{
 });
 ['calcFuel','calcDistance','calcSpeed','calcBurn'].forEach(id=>{
   document.getElementById(id).addEventListener('input', updateCalc);
+});
+
+// Tapping into one of these figures should let you just type the new value.
+// iOS drops the caret wherever you tapped, so on a short number like "120"
+// you end up fishing for the end before you can clear it. Selecting the whole
+// value on focus makes tap-then-type replace it outright.
+// The select() has to be deferred: called synchronously inside focus, iOS
+// Safari undoes it when the touch that caused the focus then places the caret.
+document.querySelectorAll('input.bingo-input').forEach(input=>{
+  input.addEventListener('focus', function(){
+    const el = this;
+    setTimeout(()=>{ try{ el.select(); }catch(e){} }, 0);
+  });
 });
 
 function renderNotifySwitch(){
