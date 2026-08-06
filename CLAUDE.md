@@ -95,16 +95,20 @@ A single-page web app ("Mission Timer") for helicopter flight/mission logging, u
   legs.
 - **Shutdown collapses the whole way**, like Mission — only the name, a summary
   of what was captured, and a chevron. Driven by `updateShutdownRow()`:
-  `expanded = shutdownOpen || legStage() === 'postLand'`, so it appears by
-  itself the moment Land is captured and is shut for the rest of the leg.
+  `expanded = shutdownOpen`, nothing more.
+  - **Purely opt-in — it is never force-opened**, not even once Land is
+    captured and Shutdown is the live block (it used to spring open then; that
+    was removed on explicit request). So `#bingoHeader`-style plain toggle:
+    `shutdownOpen = !shutdownOpen`, not the `!(open || forced)` shape the
+    Mission header still needs.
+  - Cost of this, accepted deliberately: capturing Shutdown is two taps from
+    collapsed, since `#step-on_blocks.collapsed` hides the time picker, fuel
+    box *and* Capture button. Same tradeoff as the Mission card.
   - The summary (`#shutdownSummary`) and chevron exist **only** in the
     collapsed state — the expanded row has zero spare width at 375px, so they
     must measure 0px when open. Don't give them layout when expanded.
   - Tapping the row toggles it, but the handler ignores taps landing on an
     `input` or `button` so the time picker, fuel box and Capture still work.
-  - Forced open while it is the live block, so a tap can't close it then —
-    same shape as the Mission toggle, including the
-    `!(shutdownOpen || …)` form so the first tap after capture closes it.
   - **Capturing Shutdown sets `shutdownOpen = true`**, so the row stays open
     for the fuel reading rather than shutting the instant you press Capture.
   - `loadLegForEdit()` opens it when the leg has a shutdown, and

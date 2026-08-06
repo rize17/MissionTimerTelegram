@@ -836,7 +836,7 @@ function bingoEnabled(){
 }
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v81';
+const APP_VERSION = 'v82';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
@@ -1428,14 +1428,15 @@ function legStage(){
 // ever hidden while the partner is empty, so a reading already taken is never
 // lost.
 const FUEL_PARTNER = { airborne: 'off_blocks', landed: 'on_blocks' };
-// Whether the user has opened the Shutdown row. It is also forced open for the
-// whole window where it is the live block - Land captured, Shutdown not yet -
-// so it appears by itself the moment you land, and closes again once captured.
+// Whether the user has opened the Shutdown row. Purely opt-in - it is never
+// forced open, not even once Land is captured and Shutdown is the live block.
+// Capturing a shutdown still sets it, so the row stays open for the fuel
+// reading rather than shutting the instant you press Capture.
 let shutdownOpen = false;
 
 function updateShutdownRow(){
   const step = document.getElementById('step-on_blocks');
-  const expanded = shutdownOpen || legStage() === 'postLand';
+  const expanded = shutdownOpen;
   step.classList.toggle('collapsed', !expanded);
   // Collapsed, the row carries whatever was captured, so closing it never
   // hides a recorded value.
@@ -1900,9 +1901,9 @@ document.getElementById('step-on_blocks').addEventListener('click', (e)=>{
   // Taps on the time picker, fuel box or Capture button are for those
   // controls, not for collapsing the row around them.
   if (e.target.closest('input, button')) return;
-  // Forced open while it is the live block, so a tap that would "close" it has
-  // to clear the flag rather than set it - same shape as the Mission toggle.
-  shutdownOpen = !(shutdownOpen || legStage() === 'postLand');
+  // Nothing forces this row open, so a plain toggle - no need for the
+  // !(open || forced) shape the Mission header still needs.
+  shutdownOpen = !shutdownOpen;
   updateFocus();
 });
 
