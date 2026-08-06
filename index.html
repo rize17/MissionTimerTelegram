@@ -455,9 +455,10 @@
      than competing with the numbers actually typed each time. Still fully
      editable, and focus brings them back to full contrast so you can see what
      you're typing. */
-  .fuel-row.prefilled label{ font-size: 10px; color: #4a5560; }
+  .fuel-row.prefilled{ margin-top: 6px; padding-top: 6px; }
+  .fuel-row.prefilled label{ font-size: 9px; color: #4a5560; }
   .fuel-row.prefilled input.bingo-input{
-    font-size: 13px; padding: 6px 8px; width: 72px; color: var(--text-dim);
+    font-size: 12px; padding: 5px 7px; width: 62px; color: var(--text-dim);
   }
   .fuel-row.prefilled input.bingo-input:focus{ color: var(--text); }
   .timer-card.bingo-overdue{ border-color:#8a2222; background: linear-gradient(180deg, #2a1414, #1a1010); }
@@ -835,7 +836,7 @@ function bingoEnabled(){
 }
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v80';
+const APP_VERSION = 'v81';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
