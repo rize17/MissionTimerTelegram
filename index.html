@@ -693,23 +693,6 @@
       </div>
     </div>
 
-    <div class="section-label">Notifications</div>
-    <div class="timer-card">
-      <div class="fuel-row" style="margin:0; padding:0; border:none; justify-content:space-between;">
-        <label for="notifEnabled" style="text-transform:none; font-size:14px; color:var(--text);">Send notifications</label>
-        <button type="button" class="switch" id="notifEnabled" role="switch" aria-checked="false">
-          <span class="switch-knob"></span>
-        </button>
-      </div>
-      <div class="fuel-row" style="margin-top:14px;">
-        <label for="workerUrl">Relay URL</label>
-        <input class="fuel-input mono" id="workerUrl" type="text" placeholder="https://...workers.dev" style="width:auto; flex:1; text-align:left;">
-      </div>
-      <div class="actions" style="margin-top:14px;">
-        <button class="btn-timer" id="tgTestBtn" style="flex:1; width:auto;">Send Test</button>
-      </div>
-    </div>
-
     <div class="section-label">Bingo Fuel</div>
     <div class="timer-card">
       <div class="fuel-row" style="margin:0; padding:0; border:none; justify-content:space-between;">
@@ -733,6 +716,23 @@
       <div class="fuel-row">
         <label for="bingoReserveSetting">Final reserve (kg)</label>
         <input class="bingo-input mono" id="bingoReserveSetting" type="text" inputmode="decimal" placeholder="kg">
+      </div>
+    </div>
+
+    <div class="section-label">Notifications</div>
+    <div class="timer-card">
+      <div class="fuel-row" style="margin:0; padding:0; border:none; justify-content:space-between;">
+        <label for="notifEnabled" style="text-transform:none; font-size:14px; color:var(--text);">Send notifications</label>
+        <button type="button" class="switch" id="notifEnabled" role="switch" aria-checked="false">
+          <span class="switch-knob"></span>
+        </button>
+      </div>
+      <div class="fuel-row" style="margin-top:14px;">
+        <label for="workerUrl">Relay URL</label>
+        <input class="fuel-input mono" id="workerUrl" type="text" placeholder="https://...workers.dev" style="width:auto; flex:1; text-align:left;">
+      </div>
+      <div class="actions" style="margin-top:14px;">
+        <button class="btn-timer" id="tgTestBtn" style="flex:1; width:auto;">Send Test</button>
       </div>
     </div>
   </div>
@@ -836,7 +836,7 @@ function bingoEnabled(){
 }
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v84';
+const APP_VERSION = 'v85';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };

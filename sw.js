@@ -1,5 +1,5 @@
 // Keep this in step with APP_VERSION in index.html - bump both together.
-const CACHE_NAME = 'flight-timer-cache-v84';
+const CACHE_NAME = 'flight-timer-cache-v85';
 const FILES_TO_CACHE = [
   './',
   './index.html',
