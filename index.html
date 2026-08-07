@@ -585,7 +585,7 @@
           <input class="bingo-input mono" id="bingoDistance" type="text" inputmode="decimal" placeholder="nm">
         </div>
         <div class="fuel-row prefilled" style="justify-content:space-between;">
-          <label for="bingoSpeed">Speed (kt)</label>
+          <label for="bingoSpeed">Ground speed (kt)</label>
           <input class="bingo-input mono" id="bingoSpeed" type="text" inputmode="decimal" placeholder="kt">
         </div>
         <div class="fuel-row prefilled" style="justify-content:space-between;">
@@ -719,7 +719,7 @@
         </button>
       </div>
       <div class="fuel-row" style="margin-top:14px;">
-        <label for="bingoSpeedSetting">Avg speed (kt)</label>
+        <label for="bingoSpeedSetting">Avg ground speed (kt)</label>
         <input class="bingo-input mono" id="bingoSpeedSetting" type="text" inputmode="decimal" placeholder="kt">
       </div>
       <div class="fuel-row">
@@ -759,7 +759,7 @@
         <input class="bingo-input mono" id="calcDistance" type="text" inputmode="decimal" placeholder="nm">
       </div>
       <div class="fuel-row prefilled" style="justify-content:space-between;">
-        <label for="calcSpeed">Speed (kt)</label>
+        <label for="calcSpeed">Ground speed (kt)</label>
         <input class="bingo-input mono" id="calcSpeed" type="text" inputmode="decimal" placeholder="kt">
       </div>
       <div class="fuel-row prefilled" style="justify-content:space-between;">
@@ -836,7 +836,7 @@ function bingoEnabled(){
 }
 // Shown in the header so you can tell at a glance which build the phone is
 // running. Keep this in step with CACHE_NAME in sw.js - bump both together.
-const APP_VERSION = 'v82';
+const APP_VERSION = 'v83';
 document.getElementById('appVersion').textContent = APP_VERSION;
 
 const STEP_LABELS = { off_blocks: 'Start', airborne: 'Lift', landed: 'Land', on_blocks: 'Shutdown' };
